@@ -102,8 +102,8 @@ export default function Hero() {
         <motion.div
           data-anim="hero-dashboard"
           className="relative z-10 mx-auto flex flex-col px-6 md:px-10"
-          initial={reduce ? false : { opacity: 0, y: 80, maxWidth: 1152 }}
-          animate={{ opacity: 1, y: 0, maxWidth: zoomed ? 1440 : 1152 }}
+          initial={reduce ? false : { y: 40, maxWidth: 1152 }} // transform only: an opacity fade on an ancestor disables the button's backdrop blur until it ends
+          animate={{ y: 0, maxWidth: zoomed ? 1440 : 1152 }}
           transition={{ default: { duration: 1, delay: reduce ? 0 : INTRO_REVEAL_AT + 0.35, ease: EASE }, maxWidth: { duration: reduce ? 0 : 0.55, ease: EASE } }}
         >
           <AnimatePresence mode="popLayout" initial={false}>
@@ -111,8 +111,8 @@ export default function Hero() {
             <motion.div
               key="dock"
               className="flex justify-center"
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
+              initial={{ y: 16, scale: 0.96 }}
+              animate={{ y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 16 }}
               transition={{ duration: reduce ? 0 : 0.35, ease: EASE }}
             >
