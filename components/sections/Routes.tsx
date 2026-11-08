@@ -473,16 +473,14 @@ export default function Routes() {
   const selectFields = route.fields.filter((f) => f.select);
   const cardFields = route.fields.filter((f) => !f.select && f.cards);
   const first = (p: Place) => L(p.name).split(" · ")[0];
-  const playing = !paused;
   const setOption = (key: string, value: string) => selectRoute(route.id, { ...route.options, [key]: value });
   const chooseCountry = (id: string) => { selectCountry(id); setListOpen(false); setActive(-1); inputRef.current?.focus(); };
   const caption = L(route.notice || route.serviceNote) || (route.mode === "sea" || route.mode === "air" ? "Choose on the map or search any country." : "Search available overland corridors.");
-  const motionLabel = playing ? "Pause world animation" : "Play world animation";
 
   /* ---------- presentational tokens ---------- */
   const PRESS = "transition-[transform,background-color,color,box-shadow] duration-150 ease-out active:scale-[0.97]";
-  const LABEL = "wf-sub block text-[10px] font-bold tracking-[0.08em]";
-  const FIELD = "min-h-12 w-full appearance-none bg-[#f3f2fd] px-4 text-sm outline-none ring-1 ring-inset ring-transparent transition-[box-shadow,background-color] duration-150 focus:bg-white focus:ring-brand-500";
+  const LABEL = "block text-[12px] font-medium";
+  const FIELD = "h-11 w-full appearance-none bg-[#f6f5fc] px-3.5 text-[14px] outline-none ring-1 ring-inset ring-[#e9e7f7] transition-[box-shadow,background-color] duration-150 [@media(hover:hover)]:hover:ring-[#d6d1fa] focus:bg-white focus:ring-2 focus:ring-brand-500";
   const SURFACE = "shadow-[0_1px_0_rgba(4,4,43,0.04),0_24px_60px_-32px_rgba(4,4,43,0.22)]";
   const Caret = () => <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2" style={{ color: PURPLE }}>{I.caret}</span>;
   const pct = Math.round(((legIndex + 1) / route.legs.length) * 100);
@@ -509,37 +507,24 @@ export default function Routes() {
         {/* ===== 1. controls: choose ===== */}
         <section ref={panelRef} id="route-explorer" aria-labelledby="route-title" className={`relative z-20 mt-10 bg-white p-5 md:p-6 ${SURFACE}`} style={chamfer(24, "tr")}>
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
-            <div className="lg:w-[380px] lg:shrink-0">
+            <div className="shrink-0">
               <span className={LABEL} style={{ color: "#686879" }}>Transport</span>
-              <div className="mt-2.5">
-                {/* transport modes: one bar */}
-            <div className="flex items-stretch bg-[#f3f2fd] p-1">
-              <div className="grid flex-1 grid-cols-4 gap-1">
+              <div role="group" aria-label="Transport mode" className="mt-2 inline-flex gap-0.5 bg-[#f6f5fc] p-1 ring-1 ring-inset ring-[#e9e7f7]">
                 {MODES.map((m) => {
                   const on = route.mode === m.key;
                   return (
-                    <button key={m.key} type="button" aria-pressed={on} aria-label={`${m.label} · ${m.sub}`} onClick={() => selectMode(m.key)}
-                      className={`relative flex min-h-[56px] items-center justify-center gap-2.5 px-2 text-left sm:justify-start sm:px-3 ${PRESS} ${on ? "" : "[@media(hover:hover)]:hover:bg-[#f3f2fd]"}`}
-                      style={on ? { background: INK, color: "#fff" } : { color: INK }}>
-                      <span style={{ color: on ? LIME : PURPLE }}><m.Icon className="h-5 w-5 shrink-0" /></span>
-                      <span className="hidden min-w-0 sm:block">
-                        <span className="block text-xs font-semibold">{m.label}</span>
-                      </span>
+                    <button key={m.key} type="button" aria-pressed={on} aria-label={`${m.label} · ${m.sub}`} title={`${m.label} · ${m.sub}`} onClick={() => selectMode(m.key)}
+                      className={`inline-flex h-9 w-11 items-center justify-center ${PRESS} ${on ? "" : "[@media(hover:hover)]:hover:bg-white"}`}
+                      style={on ? { background: INK, color: LIME, boxShadow: "0 1px 2px rgba(4,4,43,0.18)" } : { color: "#5a49e6" }}>
+                      <m.Icon className="h-[18px] w-[18px]" />
                     </button>
                   );
                 })}
               </div>
-              <span className="mx-1 w-px self-stretch" style={{ background: "#ecebf8" }} />
-              <button type="button" aria-pressed={playing} aria-label={motionLabel} onClick={() => setPaused((p) => !p)}
-                className={`inline-flex w-12 items-center justify-center ${PRESS} [@media(hover:hover)]:hover:bg-[#f3f2fd]`} style={{ color: PURPLE }}>
-                {playing ? I.pause : I.play}
-              </button>
-            </div>
-              </div>
             </div>
             <div ref={searchRef} className="relative min-w-0 flex-1">
               <label htmlFor="route-country-search" className={LABEL} style={{ color: "#686879" }}>{route.options.direction === "export" ? "Where are we delivering?" : "Where are we starting?"}</label>
-              <div className="relative mt-2.5 flex items-center gap-3 bg-[#f3f2fd] px-4 ring-1 ring-inset ring-transparent transition-[box-shadow,background-color] duration-150 focus-within:bg-white focus-within:ring-brand-500" style={{ color: "#686879" }}>
+              <div className="relative mt-2 flex h-11 items-center gap-2.5 bg-[#f6f5fc] px-3.5 ring-1 ring-inset ring-[#e9e7f7] transition-[box-shadow,background-color] duration-150 [@media(hover:hover)]:hover:ring-[#d6d1fa] focus-within:bg-white focus-within:ring-2 focus-within:ring-brand-500" style={{ color: "#8a89a3" }}>
                 {I.search}
                 <input id="route-country-search" ref={inputRef} type="search" autoComplete="off" role="combobox" aria-autocomplete="list" aria-expanded={listOpen} aria-controls="route-country-results"
                   aria-activedescendant={listOpen && active >= 0 ? `country-result-${active}` : undefined} placeholder="Search a country…" value={query}
@@ -557,7 +542,7 @@ export default function Routes() {
                     }
                     if (e.key === "Enter" && filtered.length) { e.preventDefault(); chooseCountry(filtered[Math.max(0, active)].id); }
                   }}
-                  className="min-h-12 w-full bg-transparent text-sm outline-none placeholder:text-[#9a99b3] [&::-webkit-search-cancel-button]:hidden" style={{ color: INK }} />
+                  className="h-full w-full bg-transparent text-[14px] outline-none placeholder:text-[#8a89a3] [&::-webkit-search-cancel-button]:hidden" style={{ color: INK }} />
                 <button type="button" aria-label="Clear search" onClick={() => { setQuery(""); inputRef.current?.focus(); setListOpen(true); setActive(-1); }} className={`inline-flex h-7 w-7 items-center justify-center ${PRESS} ${query ? "opacity-100" : "pointer-events-none opacity-0"}`} style={{ color: PURPLE }}>{I.close}</button>
               </div>
               <div id="route-country-results" role="listbox" hidden={!listOpen}
@@ -570,30 +555,30 @@ export default function Routes() {
                   </button>
                 )) : <p className="px-4 py-3 text-sm" style={{ color: "#686879" }}>No matching country</p>}
               </div>
-              <p data-caption className="mt-2.5 text-xs leading-5" style={{ color: "#686879" }}>{A(caption)}</p>
+              <p data-caption className="mt-2 text-[12px] leading-5" style={{ color: "#6f6e88" }}>{A(caption)}</p>
             </div>
             <label className="block w-full lg:w-72">
               <span className={LABEL} style={{ color: "#686879" }}>Choose a corridor</span>
-              <span className="relative mt-2.5 block">
-                <select id="route-family" value={route.id} onChange={(e) => selectRoute(e.target.value)} className={`${FIELD} pr-10 font-semibold`} style={{ color: INK }}>
+              <span className="relative mt-2 block">
+                <select id="route-family" value={route.id} onChange={(e) => selectRoute(e.target.value)} className={`${FIELD} pr-10`} style={{ color: INK }}>
                   {engine.families.filter((f) => f.mode === route.mode).map((f) => <option key={f.id} value={f.id}>{L(f.label)}</option>)}
                 </select>
                 <Caret />
               </span>
             </label>
           </div>
-          <div className="mt-5 flex flex-wrap items-start gap-x-6 gap-y-5 border-t pt-5" style={{ borderColor: "#ecebf8" }}>
+          <div className="mt-5 flex flex-wrap items-start gap-x-6 gap-y-5 border-t pt-5" style={{ borderColor: "#f0eef9" }}>
             {segFields.length > 0 && (
               <div className="flex flex-wrap gap-x-5 gap-y-4">
                 {segFields.map((f) => (
                   <fieldset key={f.key} className="min-w-0">
                     <legend className={LABEL} style={{ color: "#686879" }}>{L(f.label)}</legend>
-                    <div role="group" aria-label={L(f.label)} className="mt-2.5 inline-flex flex-wrap gap-1 bg-[#f3f2fd] p-1">
+                    <div role="group" aria-label={L(f.label)} className="mt-2 inline-flex flex-wrap gap-0.5 bg-[#f6f5fc] p-1 ring-1 ring-inset ring-[#e9e7f7]">
                       {f.options.map((o) => {
                         const on = route.options[f.key] === o.id;
                         return (
                           <button key={o.id} type="button" aria-pressed={on} onClick={() => setOption(f.key, o.id)}
-                            className={`px-4 py-2.5 text-xs ${PRESS}`}
+                            className={`h-9 px-3.5 text-[13px] ${PRESS}`}
                             style={f.key === "load" && on ? { background: LIME, color: INK, boxShadow: "0 1px 2px rgba(4,4,43,0.12)" } : on ? { background: INK, color: "#fff" } : { color: "#4b4b66" }}>
                             <strong className={on ? "font-semibold" : "font-normal"}>{A(L(o.label))}</strong>{o.description && <small className="block">{A(L(o.description))}</small>}
                           </button>
@@ -607,7 +592,7 @@ export default function Routes() {
             {selectFields.map((f) => (
               <label key={f.key} className="block">
                 <span className={LABEL} style={{ color: "#686879" }}>{L(f.label)}</span>
-                <span className="relative mt-2.5 block max-w-xs">
+                <span className="relative mt-2 block max-w-xs">
                   <select data-route-field={f.key} aria-label={L(f.label)} value={route.options[f.key]} onChange={(e) => setOption(f.key, e.target.value)} className={`${FIELD} pr-10`} style={{ color: INK }}>
                     {f.options.map((o) => <option key={o.id} value={o.id}>{L(o.label)}</option>)}
                   </select>
@@ -618,15 +603,14 @@ export default function Routes() {
             {cardFields.map((f) => (
               <fieldset key={f.key} className="min-w-0 flex-1 basis-[420px]">
                 <legend className={LABEL} style={{ color: "#686879" }}>{L(f.label)}</legend>
-                <div role="group" aria-label={L(f.label)} className="mt-2.5 grid gap-2 sm:grid-cols-3">
-                  {f.options.map((o, i) => {
+                <div role="group" aria-label={L(f.label)} className="mt-2 grid gap-2 sm:grid-cols-3">
+                  {f.options.map((o) => {
                     const on = route.options[f.key] === o.id;
                     return (
                       <button key={o.id} type="button" aria-pressed={on} onClick={() => setOption(f.key, o.id)}
                         className={`relative flex flex-col p-4 text-left ${PRESS} ${on ? "" : "[@media(hover:hover)]:hover:bg-[#ecebfc]"}`}
                         style={on ? { background: "#fff", boxShadow: `inset 0 0 0 2px ${PURPLE}` } : { background: "#f3f2fd" }}>
-                        <span className="wf-sub text-[10px] font-bold tabular-nums" style={{ color: on ? PURPLE : "#a3a2bd" }}>{String(i + 1).padStart(2, "0")}</span>
-                        <strong className="mt-2 block pr-5 text-[13px] font-semibold leading-snug" style={{ color: INK }}>{A(L(o.label))}</strong>
+                        <strong className="block pr-5 text-[13px] font-semibold leading-snug" style={{ color: INK }}>{A(L(o.label))}</strong>
                         {o.description && <small className="mt-1.5 block text-[11px] leading-5" style={{ color: "#686879" }}>{A(L(o.description))}</small>}
                         <span className={`absolute right-3 top-3 transition-[opacity,transform] duration-200 ease-out ${on ? "scale-100 opacity-100" : "scale-90 opacity-0"}`} style={{ color: PURPLE }}>{I.check}</span>
                       </button>
@@ -636,7 +620,7 @@ export default function Routes() {
               </fieldset>
             ))}
           </div>
-          <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t pt-4" style={{ borderColor: "#ecebf8" }}>
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
             <details className="group/regions">
               <summary className="inline-flex cursor-pointer list-none items-center gap-2 py-1 [&::-webkit-details-marker]:hidden">
                 <span className={LABEL} style={{ color: INK }}>Browse regions & corridors</span>
@@ -743,8 +727,7 @@ export default function Routes() {
           </div>
           {/* route title on the map */}
           <div className="pointer-events-none absolute left-0 right-0 top-[14%] z-10 mx-auto max-w-6xl px-6 md:px-10">
-            <p className={LABEL} style={{ color: PURPLE }}>Explore your route</p>
-            <h3 id="route-title" className="mt-2 text-[26px] leading-tight md:text-[34px]" style={{ color: INK, fontFamily: '"Loos Wide", Inter, sans-serif', fontWeight: 500, letterSpacing: "-0.02em" }}>{A(L(route.title))}</h3>
+            <h3 id="route-title" className="text-[26px] leading-tight md:text-[34px]" style={{ color: INK, fontFamily: '"Loos Wide", Inter, sans-serif', fontWeight: 500, letterSpacing: "-0.02em" }}>{A(L(route.title))}</h3>
           </div>
           {/* preview + consolidation stops, bottom */}
           <div ref={dockRef} className="absolute inset-x-0 bottom-[8%] z-10 mx-auto flex max-w-6xl flex-wrap items-end justify-between gap-3 px-4 md:px-10">
