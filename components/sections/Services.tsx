@@ -17,20 +17,19 @@ const EASE = [0.45, 0, 0.15, 1] as const;
 const NAVY = "#04042b", PURPLE = "#644ff2", MUTED = "#c9c8d6";
 
 const LIME = "#d5f476";
-// Brand card band: lime wedge whose top edge drops from left to right.
-const BAND = "polygon(0 0, 100% 34%, 100% 100%, 0 100%)";
+// Brand card band: flat top for ~58% of the width, then a short drop to the right edge.
+const BAND = "polygon(0 0, 58% 0, 100% 13%, 100% 100%, 0 100%)";
 
-/** Brand card frame: vertical WEFORWARD.GE, white W mark, lime band carrying the uppercase title. */
+/** Brand card frame (as in the brand guidelines): white W mark, lime band carrying the uppercase title. */
 function CardChrome({ title, reduce }: { title: string; reduce: boolean }) {
   return (
     <>
-      <div aria-hidden="true" className="absolute inset-0 z-10 bg-[linear-gradient(to_bottom,rgba(4,4,43,0.45),rgba(4,4,43,0)_32%),linear-gradient(to_right,rgba(4,4,43,0.3),rgba(4,4,43,0)_14%)]" />
-      <span aria-hidden="true" className="wf-sub absolute left-5 top-7 z-10 text-[11px] font-bold tracking-[0.18em] text-white [writing-mode:vertical-rl]">WEFORWARD.GE</span>
-      <WMark className="absolute right-6 top-6 z-10 h-10 w-auto md:h-12" color="#ffffff" />
-      <div className="absolute inset-x-0 bottom-0 z-10 h-[24%] min-h-[120px]" style={{ background: LIME, clipPath: BAND }}>
-        <div className="absolute inset-x-0 bottom-0 overflow-hidden px-6 pb-5 md:px-8 md:pb-7">
+      <div aria-hidden="true" className="absolute inset-x-0 top-0 z-10 h-40 bg-[linear-gradient(to_bottom,rgba(4,4,43,0.35),rgba(4,4,43,0))]" />
+      <WMark className="absolute right-7 top-7 z-10 h-12 w-auto md:h-14" color="#ffffff" />
+      <div className="absolute inset-x-0 -bottom-px z-10 h-[38%]" style={{ background: LIME, clipPath: BAND }}>
+        <div className="absolute inset-x-0 top-[16%] overflow-hidden px-7 pb-2 md:px-9">
           <AnimatePresence mode="popLayout" initial={false}>
-            <motion.p key={title} aria-hidden="true" className="wf-head text-[clamp(1.6rem,3vw,3rem)] leading-none" style={{ color: NAVY }}
+            <motion.p key={title} aria-hidden="true" className="wf-head max-w-[11ch] text-[clamp(1.8rem,3.4vw,3.6rem)] leading-[0.95]" style={{ color: NAVY }}
               initial={reduce ? false : { y: "110%" }} animate={{ y: 0 }} exit={reduce ? undefined : { y: "-110%" }}
               transition={{ duration: 0.7, ease: EASE }}>
               {title}
