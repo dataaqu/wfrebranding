@@ -6,6 +6,8 @@ import { INTRO_REVEAL_AT, LogoHorizontal, WMark, chamfer, Button, IconPlane, Ico
 import { SERIES, MILESTONES, KPIS, AXIS_MAX, SIDEBAR } from "@/data/landing";
 
 const EASE = [0.16, 1, 0.3, 1] as const;
+// Placeholder until real TMS screens are ready; flip to true to show the mock dashboard again.
+const SHOW_TMS_MOCK = false;
 
 export default function Hero() {
   const reduce = useReducedMotion();
@@ -210,6 +212,7 @@ export default function Hero() {
               transition={{ duration: reduce ? 0 : 0.5, ease: EASE }}
               style={{ overflow: "hidden" }}
             >
+            {SHOW_TMS_MOCK ? (
             <div className="bg-white px-7 pb-0 pt-7" style={{ color: "#04042b" }}>
               <div className="flex items-start justify-between gap-4">
                 <div>
@@ -336,6 +339,15 @@ export default function Hero() {
                 </div>
               </div>
             </div>
+            ) : (
+            <div className="flex h-[460px] items-center justify-start bg-white px-7 md:h-[600px] md:justify-center">
+              <div className="flex flex-col items-start gap-4 border-2 border-dashed border-brand-200 px-8 py-10 md:items-center md:px-16" style={{ maxWidth: "calc(100vw - 110px)" }}>
+                <WMark className="h-10 w-auto" />
+                <p className="wf-head text-xl md:text-3xl md:text-center" style={{ color: "#04042b" }}>Here will be TMS platform user viewpoint</p>
+                <p className="wf-sub text-[10px] font-bold" style={{ color: "#8373f5" }}>tms.weforward · coming soon</p>
+              </div>
+            </div>
+            )}
             </motion.div>
            </div>
             </div>
