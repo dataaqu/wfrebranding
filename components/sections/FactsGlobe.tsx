@@ -7,21 +7,34 @@ import * as THREE from "three";
 /* Scroll-driven WebGL globe for the Facts scene (Emons-style).
    `progress` is the pinned section's scroll progress 0..1:
      0.00–0.70  globe rises from below the panel and shrinks into a full sphere, rotating east
-     0.40–0.75  locations and routes into Tbilisi fade in
+     0.40–0.75  logistics-hub dots and the Tbilisi marker fade in
    Texture: NASA Blue Marble + clouds (public domain), recoloured to brand duotone → /assets/earth-brand.jpg */
 
 const R = 1;
 const TBILISI: [number, number] = [41.72, 44.79];
-const ORIGINS: [number, number][] = [
-  [29.3, 120.07], // Yiwu
-  [31.23, 121.47], // Shanghai
-  [44.2, 80.4], // Khorgos
-  [43.65, 51.17], // Aktau
-  [41.0, 28.97], // Istanbul
-  [53.55, 9.99], // Hamburg
-  [45.46, 9.19], // Milan
+// Major world logistics hubs (sea ports, air cargo and rail/land gateways), [lat, lon]
+const HUBS: [number, number][] = [
+  // East & South-East Asia
+  [31.23, 121.47], [29.87, 121.55], [23.13, 113.26], [22.54, 114.06], [22.32, 114.17], [36.07, 120.38], [39.08, 117.2],
+  [29.3, 120.07], [22.62, 120.3], [35.1, 129.04], [35.68, 139.69], [1.29, 103.85], [3.0, 101.39], [10.82, 106.63],
+  [13.08, 100.88],
+  // South & Central Asia, Middle East
+  [18.95, 72.95], [6.93, 79.85], [25.01, 55.06], [17.02, 54.09], [21.49, 39.19], [44.2, 80.4], [43.24, 76.89],
+  [43.65, 51.17], [40.41, 49.87],
+  // Europe & Black Sea
+  [51.92, 4.48], [51.22, 4.4], [52.37, 4.9], [53.55, 9.99], [53.55, 8.58], [51.96, 1.35], [49.49, 0.11], [39.47, -0.38],
+  [36.13, -5.45], [37.94, 23.65], [44.41, 8.93], [54.35, 18.65], [51.43, 6.76], [50.11, 8.68], [41.0, 28.97],
+  [36.8, 34.63], [44.17, 28.65], [42.15, 41.67], [55.75, 37.62],
+  // Africa
+  [31.26, 32.3], [31.2, 29.92], [35.89, -5.5], [33.57, -7.59], [14.69, -17.44], [5.32, -4.02], [5.63, 0.02],
+  [6.45, 3.39], [11.59, 43.15], [-4.04, 39.67], [-6.79, 39.21], [-29.86, 31.02], [-33.92, 18.42],
+  // Americas
+  [33.74, -118.27], [47.6, -122.33], [49.28, -123.12], [40.67, -74.04], [32.08, -81.09], [29.76, -95.37],
+  [25.77, -80.19], [41.88, -87.63], [35.15, -90.05], [45.5, -73.57], [9.36, -79.9], [19.05, -104.31],
+  [10.39, -75.51], [-12.05, -77.15], [-23.96, -46.33], [-34.6, -58.38],
+  // Oceania
+  [-33.87, 151.21], [-37.81, 144.96], [-36.85, 174.76],
 ];
-const EXTRA_DOTS: [number, number][] = [[42.15, 41.67], [40.41, 49.87], [39.9, 116.4], [52.52, 13.4], [55.75, 37.62]];
 
 const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
 const range = (p: number, a: number, b: number) => clamp01((p - a) / (b - a));
@@ -36,40 +49,6 @@ function toVec(lat: number, lon: number, r = R) {
 
 /** rotation.y that brings longitude `lon` to face the camera (+z) */
 const faceLon = (lon: number) => Math.PI / 2 - ((lon + 180) * Math.PI) / 180;
-
-function arc(from: THREE.Vector3, to: THREE.Vector3, lift = 0.22, segments = 64) {
-  const pts: THREE.Vector3[] = [];
-  const a = from.clone().normalize(), b = to.clone().normalize();
-  const angle = a.angleTo(b);
-  for (let i = 0; i <= segments; i++) {
-    const t = i / segments;
-    const v = new THREE.Vector3().copy(a).multiplyScalar(Math.sin((1 - t) * angle)).add(b.clone().multiplyScalar(Math.sin(t * angle))).divideScalar(Math.sin(angle));
-    v.multiplyScalar(R + Math.sin(Math.PI * t) * lift * angle);
-    pts.push(v);
-  }
-  return pts;
-}
-
-/** Dashed line as real geometry (WebGL ignores line width): short tubes along the polyline. */
-function dashedTube(points: THREE.Vector3[], radius: number, dash: number, gap: number, mat: THREE.Material) {
-  const group = new THREE.Group();
-  // cumulative length along the polyline
-  const cum = [0];
-  for (let i = 1; i < points.length; i++) cum.push(cum[i - 1] + points[i - 1].distanceTo(points[i]));
-  const total = cum[cum.length - 1];
-  const at = (d: number) => {
-    let i = 1;
-    for (; i < cum.length - 1 && cum[i] < d; i++);
-    const t = (d - cum[i - 1]) / Math.max(1e-6, cum[i] - cum[i - 1]);
-    return points[i - 1].clone().lerp(points[i], Math.min(1, Math.max(0, t)));
-  };
-  for (let start = 0; start < total; start += dash + gap) {
-    const end = Math.min(total, start + dash);
-    const pts = [0, 0.25, 0.5, 0.75, 1].map((u) => at(start + (end - start) * u));
-    group.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 6, radius, 6, false), mat));
-  }
-  return group;
-}
 
 export default function FactsGlobe({ progress, reduce }: { progress: MotionValue<number>; reduce: boolean }) {
   const hostRef = useRef<HTMLDivElement>(null);
@@ -106,7 +85,7 @@ export default function FactsGlobe({ progress, reduce }: { progress: MotionValue
     // overlays (fade in late)
     const dotGeo = new THREE.SphereGeometry(0.016, 16, 16);
     const purple = new THREE.MeshBasicMaterial({ color: 0x644ff2, transparent: true, opacity: 0 });
-    [...ORIGINS, ...EXTRA_DOTS].forEach(([lat, lon]) => {
+    HUBS.forEach(([lat, lon]) => {
       const m = new THREE.Mesh(dotGeo, purple);
       m.position.copy(toVec(lat, lon, R * 1.004));
       spin.add(m);
@@ -126,11 +105,6 @@ export default function FactsGlobe({ progress, reduce }: { progress: MotionValue
     pulse.lookAt(toVec(...TBILISI, 2));
     spin.add(pulse);
 
-    const routeMat = new THREE.MeshBasicMaterial({ color: 0x463dc1, transparent: true, opacity: 0 });
-    const tbV = toVec(...TBILISI);
-    ORIGINS.forEach(([lat, lon]) => {
-      spin.add(dashedTube(arc(toVec(lat, lon), tbV, 0.32, 96), 0.0032, 0.026, 0.016, routeMat));
-    });
 
     let w = 0, h = 0, needsRender = true, visible = true, raf = 0;
     const resize = () => {
@@ -184,7 +158,6 @@ export default function FactsGlobe({ progress, reduce }: { progress: MotionValue
       purple.opacity = f;
       lime.opacity = f;
       ringMat.opacity = f;
-      routeMat.opacity = f;
       const pp = (tSec % 2) / 2;
       pulse.scale.setScalar(1 + pp * 1.8);
       pulseMat.opacity = reduce ? 0 : f * (1 - pp) * 0.9;
