@@ -9,7 +9,7 @@ import { Wordmark } from "@/components/brand/design-system";
    - While the section scrolls into view, WEFORWARD slides down out from under the hero and settles above the globe.
    - Once pinned (progress 0..1): the globe, already touching the wordmark, rotates and shrinks 0.05–0.70;
      Georgia lights up in phosphor lime 0.40–0.75 (FactsGlobe);
-     the about copy fades/slides in on both sides 0.45–0.70. */
+     the about copy slides in from both sides 0.45–0.70, then rises and fades out 0.82–0.97. */
 
 const ABOUT_LEFT =
   "WEFORWARD founded in 2009, we take pride in our exceptional journey, rooted in experience, loyalty, and teamwork. Our seasoned team brings decades of industry expertise, ensuring your cargo is in capable hands.";
@@ -25,10 +25,12 @@ export default function Facts() {
   // hero's bottom edge, and slides down out from under it into its resting place at 8vh
   const textY = useTransform(enter, [0.15, 0.8], reduce ? ["0vh", "0vh"] : ["-22vh", "0vh"]);
   // about copy appears with Georgia's glow, sliding in from either side
-  const aboutOpacity = useTransform(scrollYProgress, [0.45, 0.7], reduce ? [1, 1] : [0, 1]);
+  // …then rises and fades out again before the section unpins
+  const aboutOpacity = useTransform(scrollYProgress, [0.45, 0.7, 0.82, 0.97], reduce ? [1, 1, 1, 1] : [0, 1, 1, 0]);
+  const aboutRise = useTransform(scrollYProgress, [0.82, 0.97], reduce ? [0, 0] : [0, -80]);
   const leftX = useTransform(scrollYProgress, [0.45, 0.7], reduce ? [0, 0] : [-40, 0]);
   const rightX = useTransform(scrollYProgress, [0.45, 0.7], reduce ? [0, 0] : [40, 0]);
-  const aboutY = useTransform(scrollYProgress, [0.45, 0.7], reduce ? [0, 0] : [24, 0]);
+  const aboutY = useTransform(scrollYProgress, [0.45, 0.7, 0.82, 0.97], reduce ? [0, 0, 0, 0] : [24, 0, 0, -80]);
 
   return (
     <section id="facts" ref={sectionRef} aria-label="WEFORWARD routes into Georgia" className="relative" style={{ height: reduce ? "100vh" : "260vh" }}>
@@ -42,8 +44,8 @@ export default function Facts() {
         </div>
         {/* about copy: left and right of the globe on desktop, stacked under it on mobile */}
         <div className="pointer-events-none absolute inset-x-0 top-1/2 hidden -translate-y-1/2 items-center justify-between px-[4vw] md:flex">
-          <motion.p className="max-w-[22vw] text-sm leading-7 lg:text-base lg:leading-8" style={{ opacity: aboutOpacity, x: leftX, color: "#1d1a55" }}>{ABOUT_LEFT}</motion.p>
-          <motion.p className="max-w-[22vw] text-right text-sm leading-7 lg:text-base lg:leading-8" style={{ opacity: aboutOpacity, x: rightX, color: "#1d1a55" }}>{ABOUT_RIGHT}</motion.p>
+          <motion.p className="max-w-[22vw] text-sm leading-7 lg:text-base lg:leading-8" style={{ opacity: aboutOpacity, x: leftX, y: aboutRise, color: "#1d1a55" }}>{ABOUT_LEFT}</motion.p>
+          <motion.p className="max-w-[22vw] text-right text-sm leading-7 lg:text-base lg:leading-8" style={{ opacity: aboutOpacity, x: rightX, y: aboutRise, color: "#1d1a55" }}>{ABOUT_RIGHT}</motion.p>
         </div>
         <motion.div className="pointer-events-none absolute inset-x-0 top-[42vh] space-y-4 px-6 text-[13px] leading-6 md:hidden" style={{ opacity: aboutOpacity, y: aboutY, color: "#1d1a55" }}>
           <p>{ABOUT_LEFT}</p>
