@@ -19,6 +19,28 @@ const SOCIAL: { name: string; href: string; d: string }[] = [
   { name: "LinkedIn", href: "https://www.linkedin.com/company/weforward/", d: "M6.9 8.9H3.8V20h3.1V8.9ZM5.35 4a1.8 1.8 0 1 0 0 3.6 1.8 1.8 0 0 0 0-3.6ZM20.2 13.6c0-3-.65-5-4.1-5-1.66 0-2.77.9-3.22 1.77h-.05V8.9H9.9V20H13v-5.5c0-1.45.27-2.85 2.07-2.85 1.77 0 1.8 1.66 1.8 2.94V20h3.1l.23-6.4Z" },
 ];
 
+/** Eased scroll to the top: duration grows with distance (0.7–1.6s), easeInOutCubic,
+ *  cancelled as soon as the visitor scrolls, touches or presses a key. */
+function scrollToTop() {
+  const start = window.scrollY;
+  if (start <= 0) return;
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches) { window.scrollTo(0, 0); return; }
+  const duration = Math.min(1600, Math.max(700, start * 0.18));
+  const ease = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+  const html = document.documentElement, prev = html.style.scrollBehavior;
+  html.style.scrollBehavior = "auto";
+  let raf = 0, t0 = 0;
+  const stop = () => { cancelAnimationFrame(raf); html.style.scrollBehavior = prev; ["wheel", "touchstart", "keydown"].forEach((e) => window.removeEventListener(e, stop)); };
+  ["wheel", "touchstart", "keydown"].forEach((e) => window.addEventListener(e, stop, { passive: true }));
+  const step = (now: number) => {
+    if (!t0) t0 = now;
+    const p = Math.min(1, (now - t0) / duration);
+    window.scrollTo(0, Math.round(start * (1 - ease(p))));
+    if (p < 1) raf = requestAnimationFrame(step); else stop();
+  };
+  raf = requestAnimationFrame(step);
+}
+
 function Col({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div>
@@ -64,13 +86,16 @@ export default function Footer() {
 
         {/* bottom bar */}
         <div className="mt-20 flex flex-wrap items-center justify-between gap-4 border-t border-white/10 pb-10 pt-6 text-[13px] text-white/45">
-          <span>© {new Date().getFullYear()} WEFORWARD LLC · Tbilisi, Georgia · Since 2009</span>
-          <a href="#main" className="group inline-flex items-center gap-2 text-white/60 transition-colors hover:text-white">
+          <span>© {new Date().getFullYear()} WEFORWARD LLC. All rights reserved.</span>
+          <button type="button" onClick={scrollToTop}
+            className="group inline-flex items-center gap-3 text-[13px] text-white/60 outline-none transition-colors duration-200 hover:text-white focus-visible:text-white">
             Back to top
-            <span className="grid h-8 w-8 place-items-center ring-1 ring-inset ring-white/20 transition-[background-color,box-shadow] group-hover:bg-white/10 group-hover:ring-white/40">
-              <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 transition-transform duration-200 group-hover:-translate-y-0.5" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="M12 19V5M6 11l6-6 6 6" /></svg>
+            {/* arrow exits upward and a twin slides in from below on hover */}
+            <span className="relative grid h-10 w-10 place-items-center overflow-hidden ring-1 ring-inset ring-white/20 transition-[background-color,box-shadow,transform] duration-200 ease-out group-hover:bg-[#d5f476] group-hover:text-[#04042b] group-hover:ring-[#d5f476] group-focus-visible:ring-2 group-focus-visible:ring-[#d5f476] group-active:scale-95">
+              <svg viewBox="0 0 24 24" className="h-4 w-4 transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:-translate-y-8" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="M12 19V5M6 11l6-6 6 6" /></svg>
+              <svg viewBox="0 0 24 24" className="absolute h-4 w-4 translate-y-8 transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:translate-y-0" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="M12 19V5M6 11l6-6 6 6" /></svg>
             </span>
-          </a>
+          </button>
         </div>
       </div>
 
