@@ -13,11 +13,13 @@ const CONTACT = [
   ["+995 593 18 81 98", "tel:+995593188198"],
   ["Tbilisi, G. Kartozia #8", "https://maps.app.goo.gl/CgzwPiYwyA9986ta9"],
 ];
-const SOCIAL = [["LinkedIn", "https://www.linkedin.com/company/weforward/"], ["Facebook", "https://www.facebook.com/weforwardllc"]];
-
-const Arrow = ({ className = "h-3.5 w-3.5" }: { className?: string }) => (
-  <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9" /></svg>
-);
+// TODO: Instagram URL not published on weforward.ge yet — set it here.
+const INSTAGRAM_URL = "https://www.instagram.com/";
+const SOCIAL: { name: string; href: string; d: string }[] = [
+  { name: "Facebook", href: "https://www.facebook.com/weforwardllc", d: "M13.5 21v-7.5h2.6l.4-3h-3V8.6c0-.9.3-1.5 1.5-1.5h1.6V4.4c-.3 0-1.2-.1-2.3-.1-2.3 0-3.9 1.4-3.9 4v2.2H7.8v3h2.6V21h3.1Z" },
+  { name: "Instagram", href: INSTAGRAM_URL, d: "M12 7.4a4.6 4.6 0 1 0 0 9.2 4.6 4.6 0 0 0 0-9.2Zm0 7.6a3 3 0 1 1 0-6 3 3 0 0 1 0 6Zm4.8-8.9a1.1 1.1 0 1 0 0 2.2 1.1 1.1 0 0 0 0-2.2ZM12 3.5c-2.3 0-2.6 0-3.5.05-2.4.1-3.8 1.5-3.9 3.9C4.5 8.4 4.5 8.7 4.5 12s0 3.6.05 4.5c.1 2.4 1.5 3.8 3.9 3.9.9.05 1.2.05 3.5.05s2.6 0 3.5-.05c2.4-.1 3.8-1.5 3.9-3.9.05-.9.05-1.2.05-4.5s0-3.6-.05-4.5c-.1-2.4-1.5-3.8-3.9-3.9C14.6 3.5 14.3 3.5 12 3.5Zm0 1.5c2.3 0 2.5 0 3.4.05 1.6.07 2.5.9 2.5 2.5.05.9.05 1.1.05 4.45s0 3.55-.05 4.45c-.07 1.6-.9 2.5-2.5 2.5-.9.05-1.1.05-3.4.05s-2.5 0-3.4-.05c-1.6-.07-2.5-.9-2.5-2.5C6 15.55 6 15.35 6 12s0-3.55.05-4.45c.07-1.6.9-2.5 2.5-2.5C9.5 5 9.7 5 12 5Z" },
+  { name: "LinkedIn", href: "https://www.linkedin.com/company/weforward/", d: "M6.9 8.9H3.8V20h3.1V8.9ZM5.35 4a1.8 1.8 0 1 0 0 3.6 1.8 1.8 0 0 0 0-3.6ZM20.2 13.6c0-3-.65-5-4.1-5-1.66 0-2.77.9-3.22 1.77h-.05V8.9H9.9V20H13v-5.5c0-1.45.27-2.85 2.07-2.85 1.77 0 1.8 1.66 1.8 2.94V20h3.1l.23-6.4Z" },
+];
 
 function Col({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -57,9 +59,14 @@ export default function Footer() {
               ))}
             </Col>
             <Col title="FOLLOW">
-              {SOCIAL.map(([t, h]) => (
-                <li key={h}><a href={h} target="_blank" rel="noopener noreferrer" className={LINK}>{t}<Arrow className="h-3 w-3 opacity-0 transition-[opacity,transform] duration-200 group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:opacity-100" /></a></li>
-              ))}
+              <li className="flex gap-2">
+                {SOCIAL.map((x) => (
+                  <a key={x.name} href={x.href} target="_blank" rel="noopener noreferrer" aria-label={`WEFORWARD on ${x.name}`}
+                    className="grid h-11 w-11 place-items-center text-white/75 ring-1 ring-inset ring-white/15 transition-[background-color,color,box-shadow,transform] duration-200 ease-out hover:bg-[#d5f476] hover:text-[#04042b] hover:ring-[#d5f476] active:scale-95">
+                    <svg viewBox="0 0 24 24" className="h-[18px] w-[18px]" fill="currentColor" aria-hidden="true"><path d={x.d} /></svg>
+                  </a>
+                ))}
+              </li>
             </Col>
           </div>
         </div>
