@@ -9,7 +9,7 @@ const EASE = [0.16, 1, 0.3, 1] as const;
 // macOS-style genie: while animating, the window is drawn as GENIE_STRIPS horizontal slices of itself.
 // Each slice is narrowed to the width of a funnel at its current height and slid up into the Open
 // button, so the content itself bends (not just the outline). Slices exist only during the animation.
-const GENIE_STRIPS = 120;
+const GENIE_STRIPS = 150;
 const clamp01 = (x: number) => Math.min(1, Math.max(0, x));
 const smooth = (x: number) => { const c = clamp01(x); return c * c * (3 - 2 * c); };
 // Placeholder until real TMS screens are ready; flip to true to show the mock dashboard again.
@@ -43,19 +43,24 @@ export default function Hero() {
       return 1 + (throat / W - 1) * funnel; // fraction of full width
     };
     const apply = (p: number) => {
-      const funnel = smooth(p / 0.45);                                   // sides bend in first…
-      const slide = Math.pow(clamp01((p - 0.22) / 0.78), 1.6) * (H + h); // …then the content pours up the throat
+      const funnel = smooth(p / 0.4);                                   // sides bend in first…
+      const slide = Math.pow(clamp01((p - 0.18) / 0.82), 1.55) * (H + h); // …then the content pours up the throat
       const dy = Math.round(slide);
       for (let i = 0; i < strips.length; i++) {
-        const mid = i * h + h / 2 - slide;
-        if (mid < -h) { strips[i].style.transform = "scaleX(0)"; continue; }
-        strips[i].style.transform = `translateY(${-dy}px) scaleX(${widthAt(mid, funnel)})`;
+        const top = i * h - slide, bot = top + h;
+        if (bot < 0) { strips[i].style.transform = "scaleX(0)"; continue; }
+        const kt = widthAt(top, funnel), kb = widthAt(bot, funnel), k = Math.max(kt, kb);
+        // scale by the wider edge, then taper the slice to a trapezoid: the outline becomes one smooth curve.
+        // The clip bleeds 1px above/below so neighbouring slices overlap without hairlines.
+        const it = (((1 - kt / k) / 2) * 100).toFixed(3), ib = (((1 - kb / k) / 2) * 100).toFixed(3);
+        strips[i].style.transform = `translateY(${-dy}px) scaleX(${k})`;
+        strips[i].style.clipPath = `polygon(${it}% -1px, ${100 - +it}% -1px, ${100 - +ib}% calc(100% + 1px), ${ib}% calc(100% + 1px))`;
       }
     };
     const closing = genie === "close";
     apply(closing ? 0 : 1);
     const c = animate(closing ? 0 : 1, closing ? 1 : 0, {
-      duration: closing ? 0.56 : 0.5, ease: closing ? [0.45, 0, 0.85, 0.5] : [0.15, 0.5, 0.3, 1], onUpdate: apply,
+      duration: closing ? 0.5 : 0.48, ease: closing ? [0.45, 0, 0.85, 0.5] : [0.15, 0.5, 0.3, 1], onUpdate: apply,
       onComplete: () => { if (closing) { setClosed(true); setMinimized(false); setZoomed(false); } setGenie(null); },
     });
     return () => c.stop();
