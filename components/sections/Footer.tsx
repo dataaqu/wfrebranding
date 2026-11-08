@@ -5,7 +5,7 @@ import { motion, useReducedMotion, useScroll, useTransform } from "motion/react"
 import { chamfer, LogoHorizontal, Wordmark } from "@/components/brand/design-system";
 
 // Contact details as published on weforward.ge.
-const NAVY = "#04042b", LIME = "#d5f476";
+const NAVY = "#04042b";
 const EXPLORE = [["Routes", "#routes"], ["Services", "#services"], ["Network", "#network"], ["Track your cargo", "#tracking"], ["Get a quote", "#quote"], ["FAQ", "#faq"]];
 const CONTACT = [
   ["sales@weforward.ge", "mailto:sales@weforward.ge"],
@@ -45,13 +45,6 @@ export default function Footer() {
         <div className="grid gap-14 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)]">
           <div>
             <LogoHorizontal size="sm" />
-            <p className="wf-head mt-10 text-[clamp(2.2rem,4.4vw,4rem)] leading-[0.95]">
-              You deal.<span className="block" style={{ color: LIME }}>We deliver.</span>
-            </p>
-            <a href="#quote" className="wf-sub mt-10 inline-flex min-h-12 items-center gap-2.5 px-6 text-[12px] font-bold text-[#04042b] bg-[#d5f476] transition-[transform,background-color] duration-150 ease-out hover:bg-white active:scale-[0.98]"
-              style={chamfer(12, "tr")}>
-              Get a quote <Arrow />
-            </a>
           </div>
 
           <div className="grid grid-cols-2 gap-x-10 gap-y-12 sm:grid-cols-[minmax(0,0.9fr)_minmax(0,1.3fr)_minmax(0,0.7fr)]">
