@@ -5,6 +5,7 @@ import Services from "@/components/sections/Services";
 import Tracking from "@/components/sections/Tracking";
 import Network from "@/components/sections/Network";
 import Contact from "@/components/sections/Contact";
+import Faq from "@/components/sections/Faq";
 import Routes from "@/components/sections/Routes";
 
 export default function Page() {
@@ -17,5 +18,6 @@ export default function Page() {
     <Network />
     <Tracking />
     <Contact />
+    <Faq />
   </main>;
 }
