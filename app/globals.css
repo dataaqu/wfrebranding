@@ -124,3 +124,7 @@
 .wf-range::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 14px; height: 14px; border-radius: 9999px; background: #644ff2; box-shadow: 0 0 0 4px #fff, 0 1px 4px 4px rgba(4,4,43,0.12); transition: transform 150ms ease-out; }
 .wf-range:active::-webkit-slider-thumb { transform: scale(1.15); }
 .wf-range::-moz-range-thumb { width: 14px; height: 14px; border: 0; border-radius: 9999px; background: #644ff2; box-shadow: 0 0 0 4px #fff, 0 1px 4px 4px rgba(4,4,43,0.12); }
+
+/* route-map stops: no browser focus box; keyboard focus gets a brand ring on the marker */
+[data-stop] { outline: none; }
+[data-stop]:focus-visible > g > circle:first-of-type { stroke: #644ff2; stroke-width: 3; }

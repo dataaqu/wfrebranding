@@ -354,14 +354,13 @@ export default function Routes() {
     setLegIndex((prev) => (prev === idx ? prev : idx));
   }, [geometry, total]);
 
-  const focusRouteStop = (n: number) => {
-    setPaused(true);
-    setView("focus");
-    setFocused(n);
-    animateNext.current = true;
-    if (route) writeURL(route, "focus");
-    elapsed.current = n >= geometry.length ? total - 0.001 : geometry[n].start;
-    draw();
+  /* stop info: a tooltip anchored to the marker — the map and page never move */
+  const [tip, setTip] = useState<{ i: number; left: number; top: number } | null>(null);
+  const showTip = (i: number) => {
+    const el = stopRefs.current[i]?.inner, host = worldRef.current;
+    if (!el || !host) return;
+    const r = el.getBoundingClientRect(), h = host.getBoundingClientRect();
+    setTip({ i, left: r.left + r.width / 2 - h.left, top: r.top - h.top });
   };
 
   /* camera apply: viewBox, marker scale + collision offsets, region labels (layoutRegionLabels) */
@@ -505,6 +504,7 @@ export default function Routes() {
     if (!engine || !route) return;
     const c = engine.countries.find((x) => x.id === route.country);
     setQuery(c ? L(c.label) : "");
+    setTip(null);
     setListOpen(false);
     setActive(-1);
   }, [engine, route]);
@@ -716,7 +716,7 @@ export default function Routes() {
       {/* ===== 2. map: see ===== */}
       <div className="relative -mt-6">
         <div ref={worldRef} data-mode={route.mode} className={`relative overflow-hidden ${expanded ? `fixed inset-3 z-[70] md:inset-8 ${SURFACE}` : "h-[62vh] min-h-[440px] lg:h-[82vh] lg:min-h-[680px] lg:max-h-[960px]"}`} style={{ background: "#f8f7ff" }}>
-          <div ref={mapBoxRef} className="absolute inset-0" style={{
+          <div ref={mapBoxRef} className="absolute inset-0" onPointerDown={(e) => { if (!(e.target as Element).closest("[data-stop]")) setTip(null); }} style={{
             maskImage: "linear-gradient(to bottom, transparent 0, #000 14%, #000 86%, transparent 100%), linear-gradient(to right, transparent 0, #000 10%, #000 90%, transparent 100%)",
             WebkitMaskImage: "linear-gradient(to bottom, transparent 0, #000 14%, #000 86%, transparent 100%), linear-gradient(to right, transparent 0, #000 10%, #000 90%, transparent 100%)",
             maskComposite: "intersect",
@@ -744,8 +744,9 @@ export default function Routes() {
                     const last = i === route.stops.length - 1, wh = s.kind === "warehouse";
                     const current = i === legIndex || i === legIndex + 1;
                     return (
-                      <g key={route.id + "s" + i} ref={(el) => setStopRef(i, "g", el)} role="button" tabIndex={0} aria-label={L(s.name)} onClick={() => focusRouteStop(i)}
-                        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); focusRouteStop(i); } }} style={{ cursor: "pointer" }}>
+                      <g key={route.id + "s" + i} ref={(el) => setStopRef(i, "g", el)} data-stop tabIndex={0} aria-label={`${STOP_LABEL[stopType(route, i)]} · ${L(s.name)}`}
+                        onPointerEnter={() => showTip(i)} onPointerLeave={(e) => { if (e.pointerType === "mouse") setTip(null); }} onClick={() => showTip(i)}
+                        onFocus={() => showTip(i)} onBlur={() => setTip(null)} style={{ cursor: "default" }}>
                         <path ref={(el) => setStopRef(i, "leader", el)} fill="none" stroke={INK} strokeOpacity={0.5} vectorEffect="non-scaling-stroke" />
                         <g ref={(el) => setStopRef(i, "inner", el)}>
                           {(() => {
@@ -763,7 +764,6 @@ export default function Routes() {
                               </>
                             );
                           })()}
-                          <title>{`${STOP_LABEL[stopType(route, i)]} · ${L(s.name)}`}</title>
                           {(i === 0 || last || wh) && (
                             <text y={i === 0 || wh ? -22 : 29} textAnchor="middle" fontSize={12} fontWeight={600} fill={INK} stroke="#f8f7ff" strokeWidth={3} paintOrder="stroke">{first(s)}</text>
                           )}
@@ -798,6 +798,21 @@ export default function Routes() {
                   })}
                 </svg>
           </div>
+          {tip && route.stops[tip.i] && (() => {
+            const t = stopType(route, tip.i), s = route.stops[tip.i], next = route.legs[tip.i];
+            return (
+              <div role="tooltip" className="pointer-events-none absolute z-30 w-max max-w-[260px] -translate-x-1/2 -translate-y-full px-3.5 py-2.5 shadow-[0_12px_28px_-10px_rgba(4,4,43,0.45)] transition-[opacity,transform] duration-150 ease-out [@starting-style]:translate-y-[calc(-100%+4px)] [@starting-style]:opacity-0"
+                style={{ left: tip.left, top: tip.top - 10, background: INK, color: "#fff" }}>
+                <span className="block text-[10px] font-semibold uppercase tracking-[0.06em]" style={{ color: LIME }}>{STOP_LABEL[t]}</span>
+                <strong className="mt-0.5 block text-[13px] font-semibold leading-snug">{L(s.name)}</strong>
+                {s.kind && <span className="block text-[11px]" style={{ color: "#c9c5ff" }}>{COPY[s.kind]}</span>}
+                <span className="mt-1 flex items-center gap-1.5 text-[11px]" style={{ color: "#c9c5ff" }}>
+                  {next ? <>{modeIcon(next.mode, "h-3.5 w-3.5")}{COPY[next.mode]} {A("→ " + first(next.to))}</> : route.options.direction === "export" ? "Arrival" : "Final destination"}
+                </span>
+                <span aria-hidden="true" className="absolute left-1/2 top-full h-2 w-2 -translate-x-1/2 -translate-y-1 rotate-45" style={{ background: INK }} />
+              </div>
+            );
+          })()}
           {/* route title on the map */}
           <div className="pointer-events-none absolute left-0 right-0 top-[14%] z-10 mx-auto max-w-6xl px-6 md:px-10">
             <h3 id="route-title" className="text-[26px] leading-tight md:text-[34px]" style={{ color: INK, fontFamily: '"Loos Wide", Inter, sans-serif', fontWeight: 500, letterSpacing: "-0.02em" }}>{A(L(route.title))}</h3>
@@ -819,7 +834,7 @@ export default function Routes() {
               <div className="flex flex-wrap items-center gap-3 px-1">
                 <span className={LABEL} style={{ color: "#686879" }}>Consolidation stops</span>
                 {warehouses.map(({ s, i }) => (
-                  <button key={i} type="button" onClick={() => { focusRouteStop(i); scrollToMap(); }}
+                  <button key={i} type="button" onClick={() => showTip(i)} onPointerEnter={() => showTip(i)} onPointerLeave={(e) => { if (e.pointerType === "mouse") setTip(null); }}
                     className={`inline-flex items-center gap-2 bg-white px-3 py-2 text-xs font-semibold ${PRESS} ${SURFACE}`} style={{ color: INK, ...chamfer(8, "br") }}>
                     <span style={{ color: PURPLE }}>{I.warehouse}</span><span>{first(s)}</span><span style={{ color: "#a99bff" }}>{I.zoom}</span>
                   </button>
