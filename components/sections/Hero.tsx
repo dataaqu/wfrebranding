@@ -6,6 +6,16 @@ import { INTRO_REVEAL_AT, LogoHorizontal, WMark, chamfer, Button, IconPlane, Ico
 import { SERIES, MILESTONES, KPIS, AXIS_MAX, SIDEBAR } from "@/data/landing";
 
 const EASE = [0.16, 1, 0.3, 1] as const;
+// Genie states: full window → bottom funnelled in → sucked into the button at the top centre.
+const GENIE = [
+  { clipPath: "polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%)", scaleX: 1, scaleY: 1, opacity: 1 },
+  { clipPath: "polygon(0% 0%, 100% 0%, 70% 100%, 30% 100%)", scaleX: 0.94, scaleY: 0.62, opacity: 1 },
+  { clipPath: "polygon(43% 0%, 57% 0%, 51% 100%, 49% 100%)", scaleX: 0.32, scaleY: 0.03, opacity: 0 },
+] as const;
+const genieFrames = (order: number[]) => ({
+  clipPath: order.map((i) => GENIE[i].clipPath), scaleX: order.map((i) => GENIE[i].scaleX),
+  scaleY: order.map((i) => GENIE[i].scaleY), opacity: order.map((i) => GENIE[i].opacity),
+});
 // Placeholder until real TMS screens are ready; flip to true to show the mock dashboard again.
 const SHOW_TMS_MOCK = false;
 
@@ -128,12 +138,16 @@ export default function Hero() {
           ) : (
           <motion.div
             key="window"
+            /* macOS-style "genie": the bottom edge funnels toward the centre, then the window is
+               drawn up into the Open button (and pours back out of it on open). */
+            style={{ transformOrigin: "50% 0%", willChange: "transform, clip-path" }}
+            initial={reduce ? false : GENIE[2]}
+            animate={reduce ? GENIE[0] : { ...GENIE[0], ...genieFrames([2, 1, 0]), transition: { duration: 0.6, times: [0, 0.45, 1], ease: [0.16, 1, 0.3, 1] } }}
+            exit={reduce ? { opacity: 0, transition: { duration: 0 } } : { ...genieFrames([0, 1, 2]), transition: { duration: 0.55, times: [0, 0.5, 1], ease: [0.6, 0, 0.9, 0.4] } }}
+          >
+          <div
             className="overflow-hidden border border-white/15 bg-ink-900 p-2 pt-0 shadow-[0_30px_80px_-20px_rgba(4,4,43,0.45)]"
-            style={{ ...chamfer(28, "tr"), transformOrigin: "50% 0%" }}
-            initial={reduce ? false : { opacity: 0, scale: 0.92, y: 40 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.92, y: 40 }}
-            transition={{ duration: reduce ? 0 : 0.45, ease: EASE }}
+            style={chamfer(28, "tr")}
           >
             {/* ---- window title bar (traffic lights) ---- */}
             <div className="group/tl relative flex h-9 items-center px-1">
@@ -331,6 +345,7 @@ export default function Hero() {
             </motion.div>
            </div>
             </div>
+          </div>
           </motion.div>
           )}
           </AnimatePresence>
