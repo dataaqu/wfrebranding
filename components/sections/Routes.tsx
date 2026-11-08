@@ -440,7 +440,7 @@ export default function Routes() {
       // keep the route clear of the faded edges, the title (top) and the preview dock (bottom)
       const dockH = dockRef.current?.offsetHeight || 0;
       const fadeX = expanded ? 24 : width * 0.1, fadeY = expanded ? 24 : height * 0.14;
-      insets.current = { left: fadeX, right: fadeX, top: fadeY + (expanded ? 0 : 90), bottom: height * 0.08 + dockH + 24 };
+      insets.current = { left: fadeX, right: fadeX, top: expanded ? fadeY : fadeY * 0.6 + 64, bottom: expanded ? fadeY : Math.max(fadeY * 0.6, height * 0.08 + dockH * 0.55) };
       const ins = insets.current, visW = Math.max(200, width - ins.left - ins.right), visH = Math.max(160, height - ins.top - ins.bottom);
       let vb: Box;
       if (view === "focus") vb = focusBox(route, focused, visW, visH);
@@ -715,7 +715,7 @@ export default function Routes() {
 
       {/* ===== 2. map: see ===== */}
       <div className="relative -mt-6">
-        <div ref={worldRef} data-mode={route.mode} className={`relative overflow-hidden ${expanded ? `fixed inset-3 z-[70] md:inset-8 ${SURFACE}` : "h-[62vh] min-h-[440px] lg:h-[74vh] lg:min-h-[620px] lg:max-h-[860px]"}`} style={{ background: "#f8f7ff" }}>
+        <div ref={worldRef} data-mode={route.mode} className={`relative overflow-hidden ${expanded ? `fixed inset-3 z-[70] md:inset-8 ${SURFACE}` : "h-[62vh] min-h-[440px] lg:h-[82vh] lg:min-h-[680px] lg:max-h-[960px]"}`} style={{ background: "#f8f7ff" }}>
           <div ref={mapBoxRef} className="absolute inset-0" style={{
             maskImage: "linear-gradient(to bottom, transparent 0, #000 14%, #000 86%, transparent 100%), linear-gradient(to right, transparent 0, #000 10%, #000 90%, transparent 100%)",
             WebkitMaskImage: "linear-gradient(to bottom, transparent 0, #000 14%, #000 86%, transparent 100%), linear-gradient(to right, transparent 0, #000 10%, #000 90%, transparent 100%)",
