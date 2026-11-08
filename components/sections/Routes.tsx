@@ -166,16 +166,16 @@ const mapIcon = (m: string, size: number) => {
 
 /* ---------- map layers ---------- */
 type CountryState = "selected" | "enabled" | "off";
-const Countries = memo(function Countries({ shapes, state, onPick }: { shapes: CountryShape[]; state: (c: CountryShape) => CountryState; onPick: (id: string) => void }) {
+/** Display-only: the route is chosen in the controls above, never by clicking the map. */
+const Countries = memo(function Countries({ shapes, state }: { shapes: CountryShape[]; state: (c: CountryShape) => CountryState }) {
   return (
     <g>
       {shapes.map((c) => {
         const s = state(c);
         return (
-          <path key={c.id} d={c.d} vectorEffect="non-scaling-stroke" aria-label={c.name} aria-disabled={s === "off"}
+          <path key={c.id} d={c.d} vectorEffect="non-scaling-stroke" aria-hidden="true"
             fill={s === "selected" ? "#b6acfa" : s === "enabled" ? "#e4e0fd" : "#ecebf8"} stroke="#f8f7ff" strokeWidth={0.8}
-            style={{ cursor: s === "off" ? "default" : "pointer", transition: "fill 300ms" }}
-            onClick={s === "off" ? undefined : () => onPick(c.id)}>
+            style={{ transition: "fill 300ms" }}>
             <title>{c.name}</title>
           </path>
         );
@@ -212,6 +212,7 @@ export default function Routes() {
   const inputRef = useRef<HTMLInputElement>(null);
   const expandRef = useRef<HTMLButtonElement>(null);
   const vehicleRef = useRef<SVGGElement>(null);
+  const vehicleIconRef = useRef<SVGGElement>(null);
   const trailRefs = useRef<(SVGPathElement | null)[]>([]);
   const stopRefs = useRef<StopRef[]>([]);
   const labelRefs = useRef<Record<string, LabelRef>>({});
@@ -321,6 +322,14 @@ export default function Routes() {
     const b = geometry[idx], t = Math.max(0, Math.min(1, (e - b.start) / b.duration));
     const [x, y] = pointAt(b, t);
     vehicleRef.current?.setAttribute("transform", `translate(${x.toFixed(2)},${y.toFixed(2)}) scale(${scale.current})`);
+    // heading from the curve tangent; the plane (drawn nose-up) rotates freely, ground/sea icons (drawn facing right)
+    // turn with the route but mirror instead of going upside-down when heading west
+    const [ax, ay] = pointAt(b, Math.max(0, t - 0.01)), [bx, by] = pointAt(b, Math.min(1, t + 0.01));
+    const deg = (Math.atan2(by - ay, bx - ax) * 180) / Math.PI;
+    const west = Math.abs(deg) > 90;
+    vehicleIconRef.current?.setAttribute("transform", b.leg.mode === "air"
+      ? `rotate(${(deg + 90).toFixed(1)})`
+      : west ? `scale(-1,1) rotate(${(180 - deg).toFixed(1)})` : `rotate(${deg.toFixed(1)})`);
     geometry.forEach((_, i) => {
       const tr = trailRefs.current[i];
       if (!tr) return;
@@ -708,7 +717,7 @@ export default function Routes() {
             <svg ref={svgRef} viewBox="0 0 1000 500" preserveAspectRatio="xMidYMid meet" className="absolute inset-0 h-full w-full" role="group" aria-label={`${L(route.title)}. ${route.stops.map((s) => L(s.name)).join(" → ")}. ${COPY.note}`}>
                   <rect x={-6000} y={-4000} width={13000} height={9000} fill="#f8f7ff" />
                   <path d={GRATICULE} fill="none" stroke="#e8e5fb" strokeWidth={1} vectorEffect="non-scaling-stroke" />
-                  <Countries shapes={shapes} state={countryState} onPick={selectCountry} />
+                  <Countries shapes={shapes} state={countryState} />
                   {route.mode === "air" && (
                     <g fill="none" aria-hidden="true">
                       {airCoverage.map((l, i) => (
@@ -755,17 +764,16 @@ export default function Routes() {
                     );
                   })}
                   <g ref={vehicleRef} aria-hidden="true" data-mode={leg.mode}>
-                    <circle r={22} fill={PURPLE} fillOpacity={0.16} />
-                    <circle r={15} fill={INK} stroke={LIME} strokeWidth={1.5} />
-                    <g style={{ color: LIME }}>{mapIcon(leg.mode, 18)}</g>
+                    <g ref={vehicleIconRef} style={{ color: INK }}>
+                      {cloneElement(mapIcon(leg.mode, 24), { stroke: "#fff", strokeWidth: 2.2, strokeLinejoin: "round", paintOrder: "stroke" })}
+                    </g>
                   </g>
                   {engine.regions.map((r) => {
                     const sel = !route.country && r.id === region;
                     const lines = r.id === "uae" ? ["United Arab", "Emirates"] : [L(r.label)];
                     const w = Math.max(47, Math.max(...lines.map((v) => v.length)) * 6.2 + 22), h = lines.length > 1 ? 37 : 27;
                     return (
-                      <g key={r.id} ref={(el) => setLabelRef(r.id, "g", el)} role="button" tabIndex={-1} aria-label={L(r.label)} aria-pressed={sel} style={{ display: "none", cursor: "pointer" }}
-                        onClick={() => selectRegion(r.id)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); selectRegion(r.id); } }}>
+                      <g key={r.id} ref={(el) => setLabelRef(r.id, "g", el)} aria-hidden="true" style={{ display: "none" }}>
                         <path ref={(el) => setLabelRef(r.id, "leader", el)} stroke={PURPLE} strokeOpacity={0.5} vectorEffect="non-scaling-stroke" />
                         <circle ref={(el) => setLabelRef(r.id, "dot", el)} fill={PURPLE} />
                         <g ref={(el) => setLabelRef(r.id, "label", el)}>
