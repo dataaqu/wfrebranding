@@ -43,13 +43,12 @@ export default function Footer() {
       <div aria-hidden="true" className="absolute inset-0 -z-10" style={{ background: NAVY, ...chamfer(56, "tl") }} />
 
       <div className="mx-auto max-w-6xl px-6 pt-20 md:px-10 md:pt-28">
-        {/* CTA + columns */}
-        <div className="grid gap-14 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)]">
-          <div>
+        {/* logo + three link columns, four equal tracks */}
+        <div className="grid grid-cols-2 gap-x-10 gap-y-12 lg:grid-cols-4">
+          <div className="col-span-2 lg:col-span-1">
             <LogoHorizontal size="sm" />
           </div>
 
-          <div className="grid grid-cols-2 gap-x-10 gap-y-12 sm:grid-cols-[minmax(0,0.9fr)_minmax(0,1.3fr)_minmax(0,0.7fr)]">
             <Col title="EXPLORE">
               {EXPLORE.map(([t, h]) => <li key={h}><a href={h} className={LINK}>{t}</a></li>)}
             </Col>
@@ -68,7 +67,6 @@ export default function Footer() {
                 ))}
               </li>
             </Col>
-          </div>
         </div>
 
         {/* bottom bar */}
