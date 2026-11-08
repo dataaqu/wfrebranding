@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { chamfer, WMark } from "@/components/brand/design-system";
 import dotmap from "@/data/dotmap.json";
@@ -8,20 +8,20 @@ import dotmap from "@/data/dotmap.json";
 // Contact / quote request. Front-end only for now: submit validates and shows a confirmation,
 // nothing is sent until a backend is connected (see onSubmit).
 const NAVY = "#04042b", PURPLE = "#644ff2", LIME = "#d5f476";
-const SERVICES = ["Road freight", "Sea freight", "Air freight", "Rail freight", "Warehousing", "Customs brokerage", "Not sure yet"];
 
-// Dotted Eurasia (equirectangular, lon -12..112, lat 8..66) with Georgia lit up.
+// Dotted Eurasia (equirectangular, lon -12..112, lat 8..66) with a single lime point at Tbilisi.
 const MAP_W = dotmap.lon[1] - dotmap.lon[0], MAP_H = dotmap.lat[1] - dotmap.lat[0];
 const px = ([lon, lat]: number[]) => [lon - dotmap.lon[0], dotmap.lat[1] - lat] as const;
-const LAND_PATH = dotmap.land.map((p) => { const [x, y] = px(p); return `M${x} ${y}h0`; }).join("");
+const TBILISI = [44.79, 41.72];
+const LAND_PATH = [...dotmap.land, ...dotmap.georgia].map((p) => { const [x, y] = px(p); return `M${x} ${y}h0`; }).join("");
 
 function DotMap() {
   const reduce = useReducedMotion();
-  const [gx, gy] = px(dotmap.georgia[Math.floor(dotmap.georgia.length / 2)]);
+  const [gx, gy] = px(TBILISI);
   return (
     <svg viewBox={`0 0 ${MAP_W} ${MAP_H}`} preserveAspectRatio="xMidYMin slice" className="h-full w-full" aria-hidden="true">
       <path d={LAND_PATH} stroke="#ffffff" strokeOpacity="0.14" strokeWidth="0.85" strokeLinecap="round" />
-      {dotmap.georgia.map((p, i) => { const [x, y] = px(p); return <circle key={i} cx={x} cy={y} r="0.55" fill={LIME} />; })}
+      <circle cx={gx} cy={gy} r="0.7" fill={LIME} />
       {!reduce && (
         <circle cx={gx} cy={gy} r="1" fill="none" stroke={LIME} strokeWidth="0.3">
           <animate attributeName="r" values="1;4.5" dur="2.4s" repeatCount="indefinite" />
@@ -33,7 +33,6 @@ function DotMap() {
 }
 
 export default function Contact() {
-  const uid = useId();
   const reduce = useReducedMotion();
   const [sent, setSent] = useState<{ first: string; email: string } | null>(null);
 
@@ -89,17 +88,8 @@ export default function Contact() {
                   <input name="first" required autoComplete="given-name" placeholder="First name" className={FIELD} /></label>
                 <label><span className={LABEL}>Last name<Req /></span>
                   <input name="last" required autoComplete="family-name" placeholder="Last name" className={FIELD} /></label>
-                <label><span className={LABEL}>Company <span className="font-normal text-[#9a99ad]">(optional)</span></span>
+                <label className="sm:col-span-2"><span className={LABEL}>Company <span className="font-normal text-[#9a99ad]">(optional)</span></span>
                   <input name="company" autoComplete="organization" placeholder="Company name" className={FIELD} /></label>
-                <label htmlFor={`${uid}-svc`}><span className={LABEL}>Service<Req /></span>
-                  <span className="relative block">
-                    <select id={`${uid}-svc`} name="service" required defaultValue="" className={`${FIELD} pr-10 invalid:text-[#9a99ad]`}>
-                      <option value="" disabled>Choose a service</option>
-                      {SERVICES.map((s) => <option key={s} className="text-[#04042b]">{s}</option>)}
-                    </select>
-                    <svg viewBox="0 0 24 24" className="pointer-events-none absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#686879]" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
-                  </span>
-                </label>
                 <label className="sm:col-span-2"><span className={LABEL}>What are you shipping?</span>
                   <textarea name="message" rows={4} placeholder="e.g. 2 pallets of electronics from Shenzhen to Tbilisi, ready in March. Add origin, destination, weight or anything we should know."
                     className={`${FIELD} h-auto resize-none py-3 leading-6`} /></label>
