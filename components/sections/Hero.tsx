@@ -15,30 +15,12 @@ export default function Hero() {
   const [hover, setHover] = useState<{ ri: number; si: number } | null>(null);
   const [tourTip, setTourTip] = useState(true);
   // macOS-style window controls on the product preview
-  const [closed, setClosed] = useState(false);
+  const [closed, setClosed] = useState(true); // platform window starts closed
   const [minimized, setMinimized] = useState(false);
   const [zoomed, setZoomed] = useState(false);
   const collapsed = closed || minimized;
-  // Remember the open window's height so the hero keeps its size when the window is closed/minimised.
-  // The video band ends `overlap` px above the hero bottom so the open window runs past it into the page.
-  // Measure it while the window is open and keep the band (and the hero's visible size) fixed when it is
-  // closed/minimised; only the white overlap strip goes away.
-  const sectionRef = useRef<HTMLElement>(null);
-  const winRef = useRef<HTMLDivElement>(null);
-  const [dims, setDims] = useState<{ win: number; video: number; overlap: number } | null>(null);
-  useEffect(() => {
-    const sec = sectionRef.current, win = winRef.current;
-    if (!sec || !win || collapsed) return;
-    const mq = window.matchMedia("(min-width: 768px)");
-    const update = () => {
-      const overlap = mq.matches ? 280 : 180;
-      setDims({ win: win.offsetHeight, video: sec.offsetHeight - overlap, overlap });
-    };
-    update();
-    const ro = new ResizeObserver(update);
-    ro.observe(sec); ro.observe(win);
-    return () => ro.disconnect();
-  }, [collapsed]);
+  // Closed/minimised: the hero is one screen tall and the video fills it. Open: the video band stops
+  // `overlap` px above the hero bottom so the window runs past it into the page.
   const videoDesktop = useRef<HTMLVideoElement>(null);
   const videoMobile = useRef<HTMLVideoElement>(null);
   useEffect(() => {
@@ -49,10 +31,10 @@ export default function Hero() {
     });
   }, [reduce]);
   return (
-    <section id="hero" ref={sectionRef} className="relative overflow-hidden">
+    <section id="hero" className={`relative overflow-hidden ${collapsed ? "min-h-[100svh]" : ""}`}>
         {/* Full-bleed hero: the port video covers header, headline and the top of the product preview;
             the preview runs on past the video into the page (Flexport-style). Navy scrim for legibility. Reduced motion: no autoplay, poster only. */}
-        <div aria-hidden="true" className={`absolute inset-x-0 top-0 overflow-hidden ${dims ? "" : "bottom-[180px] md:bottom-[280px]"}`} style={{ background: "#04042b", height: dims?.video }}>
+        <div aria-hidden="true" className={`absolute inset-x-0 top-0 overflow-hidden ${collapsed ? "bottom-0" : "bottom-[180px] md:bottom-[280px]"}`} style={{ background: "#04042b", ...chamfer(72, "br") }}>
           <div style={{ position: "absolute", inset: 0, backgroundImage: "url('/assets/hero-port.png')", backgroundSize: "cover", backgroundPosition: "center 55%" }} />
           <video ref={videoDesktop} className="hidden md:block" src="/assets/hero-720.webm" poster="/assets/hero-port.png" muted loop playsInline autoPlay={!reduce} preload="metadata"
             style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", objectFit: "cover" }} />
@@ -120,7 +102,6 @@ export default function Hero() {
         <motion.div
           data-anim="hero-dashboard"
           className="relative z-10 mx-auto flex flex-col px-6 md:px-10"
-          style={{ minHeight: collapsed && dims ? dims.win - dims.overlap : undefined }}
           initial={reduce ? false : { opacity: 0, y: 80, maxWidth: 1152 }}
           animate={{ opacity: 1, y: 0, maxWidth: zoomed ? 1440 : 1152 }}
           transition={{ default: { duration: 1, delay: reduce ? 0 : INTRO_REVEAL_AT + 0.35, ease: EASE }, maxWidth: { duration: reduce ? 0 : 0.55, ease: EASE } }}
@@ -129,7 +110,7 @@ export default function Hero() {
           {closed ? (
             <motion.div
               key="dock"
-              className="flex flex-1 items-center justify-center"
+              className="flex justify-center"
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 16 }}
@@ -147,7 +128,6 @@ export default function Hero() {
           ) : (
           <motion.div
             key="window"
-            ref={winRef}
             className="overflow-hidden border border-white/15 bg-ink-900 p-2 pt-0 shadow-[0_30px_80px_-20px_rgba(4,4,43,0.45)]"
             style={{ ...chamfer(28, "tr"), transformOrigin: "50% 0%" }}
             initial={reduce ? false : { opacity: 0, scale: 0.92, y: 40 }}
