@@ -37,7 +37,7 @@ export default function Facts() {
   const aboutY = useTransform(() => aboutYIn.get() + aboutRise.get());
 
   return (
-    <section id="facts" ref={sectionRef} aria-label="WEFORWARD routes into Georgia" className="relative" style={{ height: reduce ? "100vh" : "260vh" }}>
+    <section id="facts" ref={sectionRef} aria-label="WEFORWARD routes into Georgia" className="relative z-10" style={{ height: reduce ? "100vh" : "260vh" }}>
       <div className="sticky top-0 h-screen">
         {/* WEFORWARD on the layer behind the globe (canvas is transparent); not clipped so it can travel over the hero */}
         <motion.div className="pointer-events-none absolute inset-x-0 top-[8vh] flex justify-center" style={{ y: textY }}>

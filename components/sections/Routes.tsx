@@ -462,6 +462,10 @@ export default function Routes() {
 
   return (
     <section id="routes" className="relative py-24" style={{ background: "#f8f7ff", color: INK }}>
+      {/* rounded transition: a dome of the section colour rising behind the globe (Facts sits on a higher layer) */}
+      <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 bottom-full h-[22vw] overflow-hidden">
+        <div className="absolute left-1/2 top-0 h-[60vw] w-[125vw] -translate-x-1/2 rounded-[50%]" style={{ background: "#f8f7ff" }} />
+      </div>
       <div className="mx-auto max-w-6xl px-6 md:px-10">
         <div className="flex flex-wrap items-end justify-between gap-6">
           <Reveal id="routes-head">
