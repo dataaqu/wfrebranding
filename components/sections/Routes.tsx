@@ -2,45 +2,48 @@
 
 import { cloneElement, memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Reveal, IconPlane, IconShip, IconTrain, IconTruck } from "@/components/brand/design-system";
-import { L, loadRoutesEngine, project, type CountryShape, type Leg, type Place, type Route, type RoutesEngine } from "@/lib/routes-engine";
+import { L, loadRoutesEngine, project, type CountryShape, type Leg, type Place, type Region, type Route, type RoutesEngine } from "@/lib/routes-engine";
 
-/* Route explorer — ported from weforward-brand-concept (#route-explorer).
-   The corridor engine (window.WF_ROUTES) is the concept's own code, loaded unchanged from /public/routes-engine;
-   this file is the React UI + SVG map around it. Corridors are illustrative, not live shipments. */
+/* Route explorer — 1:1 behavioural port of weforward-brand-concept #route-explorer
+   (cinematic-v19.js renderer + studio-v27.js workspace: country search, regions disclosure,
+   consolidation strip, route-stages disclosure). The corridor engine (window.WF_ROUTES) is the
+   concept's own code, loaded unchanged from /public/routes-engine. Corridors are illustrative. */
 
 type ModeKey = "road" | "sea" | "rail" | "air";
+type Box = [number, number, number, number];
 const MODES: { key: ModeKey; label: string; sub: string; Icon: (p: { className?: string }) => React.ReactElement }[] = [
   { key: "road", label: "Road", sub: "FTL / LTL", Icon: IconTruck },
   { key: "sea", label: "Sea", sub: "FCL / LCL", Icon: IconShip },
   { key: "rail", label: "Rail", sub: "FCL / LCL", Icon: IconTrain },
-  { key: "air", label: "Air", sub: "Cargo / Express", Icon: IconPlane },
+  { key: "air", label: "Air", sub: "Air Cargo / Express", Icon: IconPlane },
 ];
-const LEG_LABEL: Record<string, string> = { road: "Road", sea: "Sea", rail: "Rail", air: "Air corridor", ferry: "Ferry crossing", connection: "Gateway connection" };
-const KIND_LABEL: Record<string, string> = { warehouse: "Warehouse intake", terminal: "Rail loading terminal" };
+const COPY = {
+  road: "Road", sea: "Sea", rail: "Rail", air: "Air corridor", ferry: "Ferry crossing", connection: "Gateway connection",
+  warehouse: "Warehouse intake", terminal: "Rail loading terminal", arrival: "Arrival", gateway: "GEORGIA",
+  note: "Illustrative corridors. Connections and availability are confirmed for each shipment.",
+  airNote: "Air corridors show representative origins, not direct-flight schedules.",
+} as Record<string, string>;
 const DASHED = new Set(["ferry", "sea", "connection"]);
-const NOTE = "Illustrative corridors. Connections and availability are confirmed for each shipment.";
-const AIR_NOTE = " Air corridors show representative origins, not direct-flight schedules.";
-
+const CORE_LABELS = ["europe", "china", "uae", "turkey", "usa", "kazakhstan"];
 const INK = "#04042b", PURPLE = "#644ff2", LIME = "#d5f476";
+const reducedMotion = () => typeof window !== "undefined" && matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-/* ---------- geometry ---------- */
+/* ---------- geometry (same maths as the concept) ---------- */
 type Built = { leg: Leg; d: string; pts: [number, number][]; cum: number[]; length: number; duration: number; start: number };
-
 function legGeometry(leg: Leg) {
   const a = leg.points.map(project);
   if (leg.arc) {
     const p0 = a[0], p2 = a[a.length - 1];
     const c: [number, number] = [(p0[0] + p2[0]) / 2, Math.min(p0[1], p2[1]) - leg.arc];
     const pts: [number, number][] = [];
-    for (let i = 0; i <= 40; i++) {
-      const t = i / 40;
+    for (let i = 0; i <= 48; i++) {
+      const t = i / 48;
       pts.push([(1 - t) ** 2 * p0[0] + 2 * (1 - t) * t * c[0] + t * t * p2[0], (1 - t) ** 2 * p0[1] + 2 * (1 - t) * t * c[1] + t * t * p2[1]]);
     }
-    return { d: `M${p0} Q${c} ${p2}`, pts };
+    return { d: `M${p0} Q${c[0]},${c[1]} ${p2}`, pts };
   }
   return { d: a.map((p, i) => (i ? "L" : "M") + p.join(",")).join(" "), pts: a };
 }
-
 function buildGeometry(route: Route): Built[] {
   let start = 0;
   return route.legs.map((leg) => {
@@ -54,7 +57,6 @@ function buildGeometry(route: Route): Built[] {
     return b;
   });
 }
-
 function pointAt(b: Built, t: number): [number, number] {
   const target = b.length * t;
   for (let i = 1; i < b.pts.length; i++) {
@@ -65,61 +67,72 @@ function pointAt(b: Built, t: number): [number, number] {
   }
   return b.pts[0];
 }
-
-function focusBox(route: Route, focused: number | null, aspect: number): [number, number, number, number] {
+function focusBox(route: Route, focused: number | null, width: number, height: number): Box {
   const legs = focused === null ? route.legs : [route.legs[Math.min(focused, route.legs.length - 1)]];
-  const pts = legs.flatMap((l) => legGeometry(l).pts);
-  const xs = pts.map((p) => p[0]), ys = pts.map((p) => p[1]);
-  const padX = 0.12, padY = 0.16;
+  const points = legs.flatMap((l) => l.points.map(project));
+  legs.filter((l) => l.arc).forEach((l) => {
+    const a = project(l.points[0]), b = project(l.points[l.points.length - 1]);
+    points.push([(a[0] + b[0]) / 2, Math.min(a[1], b[1]) - (l.arc as number) * 0.55]);
+  });
+  const xs = points.map((p) => p[0]), ys = points.map((p) => p[1]);
+  const aspect = width / height, padX = Math.min(0.28, 65 / width), padY = Math.min(0.3, 58 / height);
   let w = Math.max(50, (Math.max(...xs) - Math.min(...xs)) / (1 - 2 * padX));
   let h = Math.max(38, (Math.max(...ys) - Math.min(...ys)) / (1 - 2 * padY));
   if (w / h < aspect) w = h * aspect; else h = w / aspect;
   const cx = (Math.min(...xs) + Math.max(...xs)) / 2, cy = (Math.min(...ys) + Math.max(...ys)) / 2;
   return [cx - w / 2, cy - h / 2, w, h];
 }
+const GRATICULE = (() => {
+  const d: string[] = [];
+  for (let lon = -180; lon <= 180; lon += 20) d.push(`M${project([lon, 85])} L${project([lon, -60])}`);
+  for (let lat = -60; lat <= 80; lat += 20) d.push(`M${project([-180, lat])} L${project([180, lat])}`);
+  return d.join(" ");
+})();
 
-/* ---------- small icons ---------- */
+/* ---------- icons ---------- */
+const WAREHOUSE_D = "M12 3 2 8v13h4v-9h12v9h4V8zM8 14h8v2H8zm0 3h8v2H8z";
 const I = {
   pin: <svg viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor" aria-hidden="true"><path d="M12 2a7 7 0 0 0-7 7c0 5.2 7 13 7 13s7-7.8 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z" /></svg>,
   globe: <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M3 12h18M12 3c3 3.5 3 14.5 0 18M12 3c-3 3.5-3 14.5 0 18" /></svg>,
   expand: <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" /></svg>,
   close: <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>,
   search: <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-4-4" /></svg>,
-  chevron: <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>,
+  caret: <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>,
   check: <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="m8 12 3 3 5-6" /></svg>,
   play: <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z" /></svg>,
   pause: <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor" aria-hidden="true"><path d="M7 5h4v14H7zM13 5h4v14h-4z" /></svg>,
-  warehouse: <svg viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor" aria-hidden="true"><path d="M12 3 2 8v13h4v-9h12v9h4V8zM8 14h8v2H8zm0 3h8v2H8z" /></svg>,
+  replay: <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.3-5.6M4 4v4h4" /></svg>,
+  arrowUR: <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9" /></svg>,
+  zoom: <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-4-4M11 8v6M8 11h6" /></svg>,
+  warehouse: <svg viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor" aria-hidden="true"><path d={WAREHOUSE_D} /></svg>,
 };
+/** "→" in engine copy is shown as the Lucide arrow-right icon, as on the concept site. */
+const A = (text: string) =>
+  text.includes("→")
+    ? text.split("→").flatMap((part, i) => (i ? [<svg key={i} viewBox="0 0 24 24" className="mx-[0.12em] inline-block h-[0.85em] w-[0.85em] -translate-y-[0.06em] align-middle" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false"><path d="M5 12h14" /><path d="m12 5 7 7-7 7" /></svg>, part] : [part]))
+    : text;
+const modeOf = (m: string) => (m === "ferry" || m === "connection" ? "sea" : m);
 const modeIcon = (m: string, cls = "h-5 w-5") => {
-  const k = m === "ferry" ? "sea" : m === "connection" ? "sea" : m;
-  const M = MODES.find((x) => x.key === k)?.Icon ?? IconTruck;
+  const M = MODES.find((x) => x.key === modeOf(m))?.Icon ?? IconTruck;
   return <M className={cls} />;
 };
-/** Same icon, sized with SVG attributes for use inside the map's <svg> (CSS sizing doesn't apply there). */
 const mapIcon = (m: string, size: number) => {
-  const k = m === "ferry" || m === "connection" ? "sea" : m;
-  const M = MODES.find((x) => x.key === k)?.Icon ?? IconTruck;
+  const M = MODES.find((x) => x.key === modeOf(m))?.Icon ?? IconTruck;
   return cloneElement(M({}), { className: undefined, width: size, height: size, x: -size / 2, y: -size / 2 });
 };
 
 /* ---------- map layers ---------- */
-const Countries = memo(function Countries({ shapes, state, onPick }: { shapes: CountryShape[]; state: (c: CountryShape) => "selected" | "enabled" | "off"; onPick: (id: string) => void }) {
+type CountryState = "selected" | "enabled" | "off";
+const Countries = memo(function Countries({ shapes, state, onPick }: { shapes: CountryShape[]; state: (c: CountryShape) => CountryState; onPick: (id: string) => void }) {
   return (
     <g>
       {shapes.map((c) => {
         const s = state(c);
         return (
-          <path
-            key={c.id}
-            d={c.d}
-            vectorEffect="non-scaling-stroke"
-            fill={s === "selected" ? "#8573f6" : s === "enabled" ? "#b9b0fb" : "#dcd8fd"}
-            stroke="#f6f5ff"
-            strokeWidth={0.8}
+          <path key={c.id} d={c.d} vectorEffect="non-scaling-stroke" aria-label={c.name} aria-disabled={s === "off"}
+            fill={s === "selected" ? "#b6acfa" : s === "enabled" ? "#e4e0fd" : "#ecebf8"} stroke="#f8f7ff" strokeWidth={0.8}
             style={{ cursor: s === "off" ? "default" : "pointer", transition: "fill 300ms" }}
-            onClick={s === "off" ? undefined : () => onPick(c.id)}
-          >
+            onClick={s === "off" ? undefined : () => onPick(c.id)}>
             <title>{c.name}</title>
           </path>
         );
@@ -127,6 +140,9 @@ const Countries = memo(function Countries({ shapes, state, onPick }: { shapes: C
     </g>
   );
 });
+
+type StopRef = { g: SVGGElement | null; inner: SVGGElement | null; leader: SVGPathElement | null };
+type LabelRef = { g: SVGGElement | null; leader: SVGPathElement | null; dot: SVGCircleElement | null; label: SVGGElement | null };
 
 export default function Routes() {
   const [engine, setEngine] = useState<RoutesEngine | null>(null);
@@ -136,39 +152,52 @@ export default function Routes() {
   const [view, setView] = useState<"focus" | "world">("focus");
   const [focused, setFocused] = useState<number | null>(null);
   const [expanded, setExpanded] = useState(false);
-  const [playing, setPlaying] = useState(true);
+  const [paused, setPaused] = useState(false);
   const [legIndex, setLegIndex] = useState(0);
+  const animateNext = useRef(false);
+  // country search (studio-v27)
   const [query, setQuery] = useState("");
-  const [searchOpen, setSearchOpen] = useState(false);
-  const [regionsOpen, setRegionsOpen] = useState(false);
-  const [stagesOpen, setStagesOpen] = useState(false);
+  const [listOpen, setListOpen] = useState(false);
+  const [active, setActive] = useState(-1);
   const familyMemory = useRef<Record<string, Record<string, string>>>({});
-  const modeMemory = useRef<Record<string, string>>({});
+  const modeMemory = useRef<Record<string, { id: string; values: Record<string, string> }>>({});
 
-  // map refs (animated imperatively — the country layer never re-renders per frame)
+  const worldRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const mapBoxRef = useRef<HTMLDivElement>(null);
+  const searchRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const expandRef = useRef<HTMLButtonElement>(null);
   const vehicleRef = useRef<SVGGElement>(null);
   const trailRefs = useRef<(SVGPathElement | null)[]>([]);
-  const stopRefs = useRef<(SVGGElement | null)[]>([]);
+  const stopRefs = useRef<StopRef[]>([]);
+  const labelRefs = useRef<Record<string, LabelRef>>({});
   const progressRef = useRef<HTMLInputElement>(null);
   const outputRef = useRef<HTMLOutputElement>(null);
-  const camera = useRef<[number, number, number, number]>([0, 0, 1000, 500]);
+  const camera = useRef<Box>([0, 0, 1000, 500]);
   const scale = useRef(1);
   const elapsed = useRef(0);
-  const inView = useRef(false);
-  const sectionRef = useRef<HTMLElement>(null);
+  const visible = useRef(false);
+  const setStopRef = (i: number, k: keyof StopRef, el: Element | null) => { stopRefs.current[i] = { ...(stopRefs.current[i] || { g: null, inner: null, leader: null }), [k]: el }; };
+  const setLabelRef = (id: string, k: keyof LabelRef, el: Element | null) => { labelRefs.current[id] = { ...(labelRefs.current[id] || { g: null, leader: null, dot: null, label: null }), [k]: el }; };
 
-  /* load the engine */
+  /* ---------- engine + initial state from URL (route, option keys, mapView) ---------- */
   useEffect(() => {
     let alive = true;
     loadRoutesEngine().then(({ engine, shapes }) => {
       if (!alive) return;
+      const params = new URLSearchParams(location.search);
+      const initial = engine.families.find((f) => f.id === params.get("route")) || engine.families[0];
+      const values = Object.fromEntries(engine.optionKeys.map((k) => [k, params.get(k)]).filter(([, v]) => v)) as Record<string, string>;
+      const r = engine.build(initial.id, values);
+      familyMemory.current[r.id] = r.options;
+      modeMemory.current[r.mode] = { id: r.id, values: r.options };
       setEngine(engine);
-      setShapes(shapes.filter((s) => s.id !== "ATA"));
-      const r = engine.build(engine.families[0].id, {});
+      setShapes(shapes);
       setRoute(r);
       setRegion(r.region);
+      setView(params.get("mapView") === "world" ? "world" : "focus");
+      setPaused(reducedMotion());
     });
     return () => { alive = false; };
   }, []);
@@ -176,55 +205,60 @@ export default function Routes() {
   const geometry = useMemo(() => (route ? buildGeometry(route) : []), [route]);
   const total = useMemo(() => geometry.reduce((s, b) => s + b.duration, 0) || 1, [geometry]);
 
-  /* ---------- selection ---------- */
-  const select = useCallback((id: string, values: Record<string, string> = {}, regionOverride: string | null = null) => {
+  const writeURL = useCallback((r: Route, v: string) => {
+    if (!engine) return;
+    const url = new URL(location.href);
+    url.searchParams.set("route", r.id);
+    [...engine.optionKeys, "last"].forEach((k) => {
+      url.searchParams.delete(k);
+      if (r.options[k]) url.searchParams.set(k, r.options[k]);
+    });
+    url.searchParams.set("mapView", v);
+    history.replaceState(history.state, "", url);
+  }, [engine]);
+
+  const scrollToMap = () => worldRef.current?.scrollIntoView({ block: "center", behavior: reducedMotion() ? "auto" : "smooth" });
+
+  /* ---------- selection (selectRoute / selectCountry / selectRegion / selectMode) ---------- */
+  const selectRoute = useCallback((id: string, values: Record<string, string> = {}, regionOverride: string | null = null) => {
     if (!engine) return;
     const r = engine.build(id, values);
+    modeMemory.current[r.mode] = { id: r.id, values: r.options };
     familyMemory.current[r.id] = r.options;
-    modeMemory.current[r.mode] = r.id;
     elapsed.current = 0;
+    animateNext.current = true;
     setRoute(r);
     setRegion(regionOverride || r.region);
     setView("focus");
     setFocused(null);
     setLegIndex(0);
-  }, [engine]);
+    writeURL(r, "focus");
+  }, [engine, writeURL]);
 
   const selectCountry = useCallback((id: string) => {
     if (!engine || !route) return;
     const next = engine.forCountry(id, route.mode, route.options);
-    if (next) select(next.id, { ...next.values, direction: route.options.direction || "import" });
-    setQuery("");
-    setSearchOpen(false);
-  }, [engine, route, select]);
+    if (!next) return;
+    selectRoute(next.id, { ...next.values, direction: route.options.direction || "import" });
+  }, [engine, route, selectRoute]);
 
-  const selectRegion = (rid: string) => {
+  const selectRegion = useCallback((rid: string) => {
     if (!engine || !route) return;
     const next = engine.forRegion(rid, route.mode);
-    select(next.id, { ...(familyMemory.current[next.id] || {}), ...next.values }, rid);
-  };
+    selectRoute(next.id, { ...(familyMemory.current[next.id] || {}), ...next.values }, rid);
+  }, [engine, route, selectRoute]);
 
   const selectMode = (key: ModeKey) => {
-    if (!engine || !route || key === route.mode) return;
+    if (!engine || !route) return;
     if (route.country && (key === "air" || key === "sea")) {
       const next = engine.forCountry(route.country, key);
-      if (next) return select(next.id, next.values);
+      if (next) return selectRoute(next.id, next.values);
     }
     const chosen = engine.forRegion(region || route.region, key);
-    const fam = engine.families.find((f) => f.id === chosen.id && f.mode === key);
-    if (fam) return select(fam.id, { ...(familyMemory.current[fam.id] || {}), ...chosen.values });
-    const fallback = engine.families.find((f) => f.id === modeMemory.current[key]) || engine.families.find((f) => f.mode === key)!;
-    select(fallback.id, familyMemory.current[fallback.id] || {});
-  };
-
-  const setField = (key: string, value: string) => route && select(route.id, { ...route.options, [key]: value }, region);
-
-  const focusStop = (i: number) => {
-    setPlaying(false);
-    setView("focus");
-    setFocused(i);
-    elapsed.current = i >= geometry.length ? total - 0.001 : geometry[i].start;
-    draw();
+    let fam = engine.families.find((f) => f.id === chosen.id && f.mode === key);
+    if (fam) return selectRoute(fam.id, { ...(familyMemory.current[fam.id] || {}), ...chosen.values });
+    fam = engine.families.find((f) => f.id === modeMemory.current[key]?.id) || engine.families.find((f) => f.mode === key)!;
+    selectRoute(fam.id, familyMemory.current[fam.id] || {});
   };
 
   /* ---------- drawing ---------- */
@@ -244,72 +278,126 @@ export default function Routes() {
       tr.style.opacity = f > 0 ? "1" : "0";
     });
     const pct = (e / total) * 100;
-    if (progressRef.current) progressRef.current.value = pct.toFixed(1);
+    if (progressRef.current) {
+      progressRef.current.value = pct.toFixed(1);
+      progressRef.current.setAttribute("aria-valuetext", `${Math.round(pct)}% · ${COPY[b.leg.mode]} · ${L(b.leg.from.name)} — ${L(b.leg.to.name)}`);
+    }
     if (outputRef.current) outputRef.current.textContent = Math.round(pct) + "%";
     setLegIndex((prev) => (prev === idx ? prev : idx));
   }, [geometry, total]);
 
-  const applyCamera = useCallback((box: [number, number, number, number]) => {
+  const focusRouteStop = (n: number) => {
+    setPaused(true);
+    setView("focus");
+    setFocused(n);
+    animateNext.current = true;
+    if (route) writeURL(route, "focus");
+    elapsed.current = n >= geometry.length ? total - 0.001 : geometry[n].start;
+    draw();
+  };
+
+  /* camera apply: viewBox, marker scale + collision offsets, region labels (layoutRegionLabels) */
+  const applyCamera = useCallback((box: Box) => {
     const svg = svgRef.current, host = mapBoxRef.current;
-    if (!svg || !host) return;
+    if (!svg || !host || !route || !engine) return;
+    const width = host.clientWidth || 1, height = host.clientHeight || 1;
     camera.current = box;
     svg.setAttribute("viewBox", box.map((n) => n.toFixed(3)).join(" "));
-    const s = Math.max(box[2] / (host.clientWidth || 1), box[3] / (host.clientHeight || 1));
+    const s = Math.max(box[2] / width, box[3] / height);
     scale.current = s;
     trailRefs.current.forEach((tr) => tr?.setAttribute("stroke-width", String(3.2 * s)));
-    stopRefs.current.forEach((g, i) => {
-      if (!g || !route) return;
-      const p = project(route.stops[i].point);
-      const hide = view === "world" && i > 0 && i < route.stops.length - 1 && route.stops[i].kind !== "warehouse";
-      g.style.display = hide ? "none" : "";
-      g.setAttribute("transform", `translate(${p[0]},${p[1]}) scale(${s})`);
+    const placed: [number, number][] = [];
+    route.stops.forEach((stop, i) => {
+      const m = stopRefs.current[i];
+      if (!m?.g || !m.inner) return;
+      const p = project(stop.point);
+      m.g.setAttribute("transform", `translate(${p[0]},${p[1]})`);
+      const hide = view === "world" && i > 0 && i < route.stops.length - 1 && stop.kind !== "warehouse";
+      m.g.style.display = hide ? "none" : "";
+      m.g.setAttribute("tabindex", hide ? "-1" : "0");
+      let dy = 0, attempt = 0;
+      while (view !== "world" && placed.some((q) => Math.hypot(q[0] - p[0] / s, q[1] - (p[1] / s + dy)) < 32) && attempt < 12) {
+        attempt++;
+        dy = (attempt % 2 ? 1 : -1) * Math.ceil(attempt / 2) * 30;
+      }
+      placed.push([p[0] / s, p[1] / s + dy]);
+      m.inner.setAttribute("transform", `translate(0,${dy * s}) scale(${s})`);
+      m.leader?.setAttribute("d", dy ? `M0,0 L0,${dy * s}` : "");
+    });
+    const narrow = box[2] / s < 470;
+    const taken: { x: number; y: number; w: number; h: number }[] = [];
+    engine.regions.forEach((r: Region) => {
+      const item = labelRefs.current[r.id];
+      if (!item?.g) return;
+      const extra = route.mode === "air"
+        ? ["africa", "india", "asia-pacific", "oceania", "canada", "south-america"].includes(r.id) && (!narrow || ["africa", "oceania"].includes(r.id))
+        : route.mode === "sea" && !narrow && ["canada", "south-america"].includes(r.id);
+      const show = view === "world" && (CORE_LABELS.includes(r.id) || extra || region === r.id)
+        && (route.mode === "air" || route.mode === "sea" || engine.families.some((f) => f.region === r.id && f.mode === route.mode));
+      item.g.style.display = show ? "" : "none";
+      item.g.setAttribute("tabindex", show ? "0" : "-1");
+      if (!show) return;
+      const lines = r.id === "uae" ? ["United Arab", "Emirates"] : [L(r.label)];
+      const lw = Math.max(47, Math.max(...lines.map((v) => v.length)) * 6.2 + 22), lh = lines.length > 1 ? 37 : 27;
+      const a = project(r.point), w = lw * s, h = lh * s, pref = [a[0] + r.offset[0] * s, a[1] + r.offset[1] * s];
+      let best: { x: number; y: number; score: number } | null = null;
+      for (let dx = -4; dx <= 4; dx++) for (let dyy = -5; dyy <= 5; dyy++) {
+        const x = Math.max(box[0] + w / 2 + 5 * s, Math.min(box[0] + box[2] - w / 2 - 5 * s, pref[0] + dx * 40 * s));
+        const y = Math.max(box[1] + h / 2 + 5 * s, Math.min(box[1] + box[3] - h / 2 - 5 * s, pref[1] + dyy * 26 * s));
+        const overlaps = taken.reduce((sum, q) => sum + (Math.abs(x - q.x) < (w + q.w) / 2 + 4 * s && Math.abs(y - q.y) < (h + q.h) / 2 + 4 * s ? 1 : 0), 0);
+        const score = overlaps * 1e9 + ((x - pref[0]) / s) ** 2 + ((y - pref[1]) / s) ** 2;
+        if (!best || score < best.score) best = { x, y, score };
+      }
+      const { x, y } = best!;
+      taken.push({ x, y, w, h });
+      item.leader?.setAttribute("d", `M${a} L${x},${y}`);
+      item.dot?.setAttribute("cx", String(a[0]));
+      item.dot?.setAttribute("cy", String(a[1]));
+      item.dot?.setAttribute("r", String(2.1 * s));
+      item.label?.setAttribute("transform", `translate(${x},${y}) scale(${s})`);
     });
     draw();
-  }, [route, view, draw]);
+  }, [route, engine, view, region, draw]);
 
-  /* camera: animate the viewBox to the focus/world box */
+  /* fitMap: animated camera to the focus box / world */
   useLayoutEffect(() => {
     const host = mapBoxRef.current;
     if (!route || !host) return;
     let raf = 0;
     const fit = (animate: boolean) => {
-      const aspect = (host.clientWidth || 1) / (host.clientHeight || 1);
-      let target: [number, number, number, number];
-      if (view === "world") {
-        let w = 1000, h = 500;
-        if (w / h < aspect) w = h * aspect; else h = w / aspect;
-        target = [500 - w / 2, 250 - h / 2, w, h];
-      } else target = focusBox(route, focused, aspect);
+      const width = host.clientWidth || 680, height = host.clientHeight || 420;
+      const target: Box = view === "focus" ? focusBox(route, focused, width, height) : [0, 0, 1000, 500];
       cancelAnimationFrame(raf);
-      if (!animate || matchMedia("(prefers-reduced-motion: reduce)").matches) return applyCamera(target);
-      const from = camera.current.slice() as typeof target, t0 = performance.now();
+      if (!animate || reducedMotion()) return applyCamera(target);
+      const from = camera.current.slice() as Box, t0 = performance.now();
       const step = (now: number) => {
         const k = Math.min(1, (now - t0) / 720), ease = 1 - Math.pow(1 - k, 4);
-        applyCamera(target.map((v, i) => from[i] + (v - from[i]) * ease) as typeof target);
+        applyCamera(target.map((v, i) => from[i] + (v - from[i]) * ease) as Box);
         if (k < 1) raf = requestAnimationFrame(step);
       };
       raf = requestAnimationFrame(step);
     };
-    fit(true);
+    fit(animateNext.current);
+    animateNext.current = false;
     const ro = new ResizeObserver(() => fit(false));
     ro.observe(host);
     return () => { cancelAnimationFrame(raf); ro.disconnect(); };
   }, [route, view, focused, expanded, applyCamera]);
 
-  /* play loop — only while on screen */
+  /* tick: runs while visible, not paused, tab visible */
   useEffect(() => {
-    const el = sectionRef.current;
+    const el = worldRef.current;
     if (!el) return;
-    const io = new IntersectionObserver(([en]) => { inView.current = en.isIntersecting; }, { rootMargin: "100px" });
+    const io = new IntersectionObserver(([en]) => { visible.current = en.isIntersecting; }, { rootMargin: "80px" });
     io.observe(el);
     return () => io.disconnect();
-  }, []);
+  }, [engine]);
   useEffect(() => {
-    if (!playing || !geometry.length || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (paused || !geometry.length) return;
     let raf = 0, last: number | null = null;
     const tick = (now: number) => {
       raf = requestAnimationFrame(tick);
-      if (!inView.current || document.hidden) { last = null; return; }
+      if (!visible.current || document.hidden) { last = null; return; }
       const dt = last === null ? 0 : Math.min((now - last) / 1000, 0.1);
       last = now;
       elapsed.current = (elapsed.current + dt) % total;
@@ -317,108 +405,63 @@ export default function Routes() {
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, [playing, geometry, total, draw]);
+  }, [paused, geometry, total, draw]);
 
-  /* ---------- derived UI data ---------- */
-  const countryState = useCallback((c: CountryShape): "selected" | "enabled" | "off" => {
+  /* Escape closes the expanded map and returns focus to the expand button */
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && expanded) { setExpanded(false); expandRef.current?.focus(); }
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [expanded]);
+
+  /* search input shows the selected country; any route change closes the list; outside pointerdown closes */
+  useEffect(() => {
+    if (!engine || !route) return;
+    const c = engine.countries.find((x) => x.id === route.country);
+    setQuery(c ? L(c.label) : "");
+    setListOpen(false);
+    setActive(-1);
+  }, [engine, route]);
+  useEffect(() => {
+    const onDown = (e: PointerEvent) => { if (searchRef.current && !searchRef.current.contains(e.target as Node)) { setListOpen(false); setActive(-1); } };
+    document.addEventListener("pointerdown", onDown);
+    return () => document.removeEventListener("pointerdown", onDown);
+  }, []);
+
+  /* ---------- derived ---------- */
+  const countryState = useCallback((c: CountryShape): CountryState => {
     if (!engine || !route) return "off";
     if (route.country ? c.id === route.country : c.region === region) return "selected";
     return engine.countryAvailable(c.id, route.mode, route.options) ? "enabled" : "off";
   }, [engine, route, region]);
-
-  const results = useMemo(() => {
-    if (!engine || !route || !query.trim()) return [];
-    const q = query.trim().toLowerCase();
-    return engine.countries.filter((c) => L(c.label).toLowerCase().includes(q) && engine.countryAvailable(c.id, route.mode, route.options)).slice(0, 8);
-  }, [engine, route, query]);
-
-  const regions = useMemo(() => {
+  const filtered = useMemo(() => {
     if (!engine || !route) return [];
-    return engine.regions.filter((r) => route.mode === "air" || route.mode === "sea" || engine.families.some((f) => f.region === r.id && f.mode === route.mode));
-  }, [engine, route]);
+    const q = query.trim().toLocaleLowerCase();
+    return engine.countries.filter((c) => engine.countryAvailable(c.id, route.mode, route.options) && c.label.some((n) => n.toLocaleLowerCase().includes(q))).slice(0, 40);
+  }, [engine, route, query]);
+  const regionButtons = useMemo(() => (engine && route
+    ? engine.regions.filter((r) => route.mode === "air" || route.mode === "sea" || engine.families.some((f) => f.region === r.id && f.mode === route.mode))
+    : []), [engine, route]);
+  const airCoverage = useMemo(() => (engine ? ((engine as unknown as { airCoverage?: (Leg & { region: string })[] }).airCoverage || []) : []), [engine]);
 
-  if (!engine || !route) {
-    return <section id="routes" ref={sectionRef} className="min-h-[900px]" style={{ background: "#f8f7ff" }} aria-busy="true" />;
-  }
+  if (!engine || !route) return <section id="routes" className="min-h-[900px]" style={{ background: "#f8f7ff" }} aria-busy="true" />;
 
   const leg = route.legs[Math.min(legIndex, route.legs.length - 1)];
   const warehouses = route.stops.map((s, i) => ({ s, i })).filter(({ s }) => s.kind === "warehouse");
-  const inlineFields = route.fields.filter((f) => !f.select && !f.cards);
-  const blockFields = route.fields.filter((f) => f.select || f.cards);
-  const short = (p: Place) => L(p.name).split(" · ")[0];
-
-  const map = (
-    <div className={`relative flex flex-col overflow-hidden border border-brand-100 ${expanded ? "fixed inset-3 z-[70] md:inset-8" : "h-[560px] md:h-[640px]"}`} style={{ background: "#f6f5ff" }}>
-      <div className="relative z-10 flex items-center justify-between px-5 py-4">
-        <p className="wf-sub flex items-center gap-2 text-[10px] font-bold" style={{ color: "#373650" }}>
-          <span className="inline-block h-1.5 w-1.5 rounded-full" style={{ background: LIME, boxShadow: `0 0 0 3px ${LIME}55` }} /> Connected to Georgia
-        </p>
-        <div className="flex gap-2">
-          {([["focus", I.pin, "Focus route"], ["world", I.globe, "World view"]] as const).map(([v, icon, label]) => (
-            <button key={v} type="button" aria-pressed={view === v} aria-label={label} onClick={() => { setView(v); setFocused(null); }}
-              className="inline-flex h-10 w-10 items-center justify-center border transition-colors"
-              style={view === v ? { background: PURPLE, borderColor: PURPLE, color: "#fff" } : { background: "#fff", borderColor: "#e4e1ff", color: INK }}>{icon}</button>
-          ))}
-          <button type="button" aria-label={expanded ? "Close expanded map" : "Expand map"} aria-expanded={expanded} onClick={() => setExpanded((x) => !x)}
-            className="inline-flex h-10 w-10 items-center justify-center border transition-colors" style={{ background: "#fff", borderColor: "#e4e1ff", color: INK }}>{expanded ? I.close : I.expand}</button>
-        </div>
-      </div>
-      <div ref={mapBoxRef} className="relative min-h-0 flex-1">
-        <svg ref={svgRef} viewBox="0 0 1000 500" preserveAspectRatio="xMidYMid meet" className="absolute inset-0 h-full w-full" role="img" aria-label={`${L(route.title)}: ${route.stops.map((s) => L(s.name)).join(" → ")}`}>
-          <rect x={-2000} y={-1000} width={5000} height={3000} fill="#f6f5ff" />
-          <Countries shapes={shapes} state={countryState} onPick={selectCountry} />
-          {/* route */}
-          {geometry.map((b, i) => (
-            <path key={"base" + i} d={b.d} fill="none" stroke={PURPLE} strokeOpacity={0.55} strokeWidth={2} vectorEffect="non-scaling-stroke" strokeDasharray={DASHED.has(b.leg.mode) ? "6 6" : undefined} strokeLinecap="round" />
-          ))}
-          {geometry.map((b, i) => (
-            <path key={"trail" + route.id + i} ref={(el) => { trailRefs.current[i] = el; }} d={b.d} fill="none" stroke={DASHED.has(b.leg.mode) ? INK : PURPLE} pathLength={1} strokeDasharray="0 1" strokeLinecap="round" style={{ opacity: 0 }} />
-          ))}
-          {/* stops */}
-          {route.stops.map((s, i) => {
-            const last = i === route.stops.length - 1, wh = s.kind === "warehouse";
-            const current = i === legIndex || i === legIndex + 1;
-            return (
-              <g key={route.id + "s" + i} ref={(el) => { stopRefs.current[i] = el; }} role="button" tabIndex={0} aria-label={L(s.name)} onClick={() => focusStop(i)} onKeyDown={(e) => e.key === "Enter" && focusStop(i)} style={{ cursor: "pointer" }}>
-                {wh ? (
-                  <>
-                    <circle r={13} fill={INK} stroke={current ? LIME : "#fff"} strokeWidth={2} />
-                    <path d="M12 3 2 8v13h4v-9h12v9h4V8zM8 14h8v2H8zm0 3h8v2H8z" fill="#fff" transform="translate(-8,-8) scale(0.667)" />
-                  </>
-                ) : (
-                  <>
-                    <circle r={last ? 13 : 10} fill={last ? LIME : "#fff"} stroke={INK} strokeWidth={last ? 2 : 1.5} />
-                    <text textAnchor="middle" dominantBaseline="central" y={0.5} fontSize={last ? 11 : 9} fontWeight={700} fill={INK}>{i + 1}</text>
-                  </>
-                )}
-                {(i === 0 || last || wh) && (
-                  <text y={i === 0 || wh ? -22 : 30} textAnchor="middle" fontSize={12} fontWeight={600} fill={INK} stroke="#f6f5ff" strokeWidth={3} paintOrder="stroke">{short(s)}</text>
-                )}
-              </g>
-            );
-          })}
-          {/* vehicle */}
-          <g ref={vehicleRef} aria-hidden="true">
-            <circle r={21} fill={PURPLE} fillOpacity={0.18} />
-            <circle r={15} fill={INK} />
-            <g style={{ color: "#fff" }}>{mapIcon(leg.mode, 18)}</g>
-          </g>
-        </svg>
-      </div>
-      {/* route preview footer */}
-      <div className="relative z-10 m-3 flex items-center gap-4 border border-brand-100 bg-white px-4 py-3">
-        <span style={{ color: INK }}>{modeIcon(leg.mode, "h-6 w-6")}</span>
-        <div className="min-w-0 flex-1">
-          <p className="wf-sub text-[9px] font-bold" style={{ color: "#686879" }}>Route preview</p>
-          <p className="truncate text-sm font-bold" style={{ color: INK }}>{short(leg.from)} — {short(leg.to)}</p>
-        </div>
-        <span className="text-xs tabular-nums" style={{ color: "#4b4b66" }}>{String(legIndex + 1).padStart(2, "0")} / {String(route.legs.length).padStart(2, "0")}</span>
-      </div>
-    </div>
-  );
+  const segFields = route.fields.filter((f) => !f.select && !f.cards);
+  const selectFields = route.fields.filter((f) => f.select);
+  const cardFields = route.fields.filter((f) => !f.select && f.cards);
+  const first = (p: Place) => L(p.name).split(" · ")[0];
+  const playing = !paused;
+  const setOption = (key: string, value: string) => selectRoute(route.id, { ...route.options, [key]: value });
+  const chooseCountry = (id: string) => { selectCountry(id); setListOpen(false); setActive(-1); inputRef.current?.focus(); };
+  const caption = L(route.notice || route.serviceNote) || (route.mode === "sea" || route.mode === "air" ? "Choose on the map or search any country." : "Search available overland corridors.");
+  const motionLabel = playing ? "Pause world animation" : "Play world animation";
 
   return (
-    <section id="routes" ref={sectionRef} className="relative py-24" style={{ background: "#f8f7ff", color: INK }}>
+    <section id="routes" className="relative py-24" style={{ background: "#f8f7ff", color: INK }}>
       <div className="mx-auto max-w-6xl px-6 md:px-10">
         <div className="flex flex-wrap items-end justify-between gap-6">
           <Reveal id="routes-head">
@@ -428,14 +471,111 @@ export default function Routes() {
               <div className="wf-head text-5xl md:text-7xl" style={{ color: PURPLE }}>In focus.</div>
             </div>
           </Reveal>
-          <p className="max-w-xs text-base leading-7" style={{ color: "#4b4b66" }}>Choose a mode. Explore the corridor. See every stage from warehouse to door.</p>
+          <p className="max-w-xs text-base leading-7" style={{ color: "#4b4b66" }}>Choose a country. Explore the connections. See every stage.</p>
         </div>
 
         <div className="mt-12 grid gap-6 lg:grid-cols-[1fr_1.05fr]">
-          {/* ---------- left: map + modes ---------- */}
+          {/* ================= scene: map + modes + consolidation strip ================= */}
           <div className="min-w-0">
             {expanded && <div className="fixed inset-0 z-[65] bg-ink-950/40" onClick={() => setExpanded(false)} aria-hidden="true" />}
-            {map}
+            <div ref={worldRef} data-mode={route.mode} className={`relative flex flex-col overflow-hidden border border-brand-100 ${expanded ? "fixed inset-3 z-[70] md:inset-8" : "h-[560px] md:h-[640px]"}`} style={{ background: "#f8f7ff" }}>
+              <div className="relative z-10 flex items-center justify-between px-5 py-4">
+                <p className="wf-sub flex items-center gap-2 text-[10px] font-bold" style={{ color: "#373650" }}>
+                  <span className="inline-block h-1.5 w-1.5 rounded-full" style={{ background: LIME, boxShadow: `0 0 0 3px ${LIME}55` }} /> Connected to Georgia
+                </p>
+                <div className="flex gap-2">
+                  {([["focus", I.pin, "Focus route"], ["world", I.globe, "World view"]] as const).map(([v, icon, label]) => (
+                    <button key={v} type="button" aria-pressed={view === v} aria-label={label} title={label}
+                      onClick={() => { animateNext.current = true; setView(v); setFocused(null); writeURL(route, v); }}
+                      className="inline-flex h-10 w-10 items-center justify-center border transition-colors"
+                      style={view === v ? { background: PURPLE, borderColor: PURPLE, color: "#fff" } : { background: "#fff", borderColor: "#e4e1ff", color: INK }}>{icon}</button>
+                  ))}
+                  <button ref={expandRef} type="button" aria-label={expanded ? "Close expanded map" : "Expand map"} title={expanded ? "Close expanded map" : "Expand map"} aria-expanded={expanded}
+                    onClick={() => setExpanded((x) => !x)} className="inline-flex h-10 w-10 items-center justify-center border transition-colors" style={{ background: "#fff", borderColor: "#e4e1ff", color: INK }}>{expanded ? I.close : I.expand}</button>
+                </div>
+              </div>
+              <div ref={mapBoxRef} className="relative min-h-0 flex-1">
+                <svg ref={svgRef} viewBox="0 0 1000 500" preserveAspectRatio="xMidYMid meet" className="absolute inset-0 h-full w-full" role="group" aria-label={`${L(route.title)}. ${route.stops.map((s) => L(s.name)).join(" → ")}. ${COPY.note}`}>
+                  <rect x={-500} y={-300} width={2000} height={1100} fill="#f8f7ff" />
+                  <path d={GRATICULE} fill="none" stroke="#e8e5fb" strokeWidth={1} vectorEffect="non-scaling-stroke" />
+                  <Countries shapes={shapes} state={countryState} onPick={selectCountry} />
+                  {route.mode === "air" && (
+                    <g fill="none" aria-hidden="true">
+                      {airCoverage.map((l, i) => (
+                        <path key={i} d={legGeometry(l).d} stroke={l.region === region ? PURPLE : "#a99bff"} strokeOpacity={l.region === region ? 0.9 : 0.45} strokeWidth={1.2} strokeDasharray="3 4" vectorEffect="non-scaling-stroke" />
+                      ))}
+                    </g>
+                  )}
+                  {geometry.map((b, i) => <path key={"glow" + i} d={b.d} fill="none" stroke={PURPLE} strokeOpacity={0.12} strokeWidth={9} strokeLinecap="round" vectorEffect="non-scaling-stroke" />)}
+                  {geometry.map((b, i) => (
+                    <path key={"base" + i} d={b.d} fill="none" stroke={PURPLE} strokeOpacity={i === legIndex ? 0.95 : 0.55} strokeWidth={2} vectorEffect="non-scaling-stroke" strokeDasharray={DASHED.has(b.leg.mode) ? "6 6" : undefined} strokeLinecap="round" />
+                  ))}
+                  {geometry.map((b, i) => (
+                    <path key={"trail" + route.id + i} ref={(el) => { trailRefs.current[i] = el; }} d={b.d} fill="none" stroke={DASHED.has(b.leg.mode) ? INK : PURPLE} pathLength={1} strokeDasharray="0 1" strokeLinecap="round" style={{ opacity: 0 }} />
+                  ))}
+                  {route.stops.map((s, i) => {
+                    const last = i === route.stops.length - 1, wh = s.kind === "warehouse";
+                    const current = i === legIndex || i === legIndex + 1;
+                    return (
+                      <g key={route.id + "s" + i} ref={(el) => setStopRef(i, "g", el)} role="button" tabIndex={0} aria-label={L(s.name)} onClick={() => focusRouteStop(i)}
+                        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); focusRouteStop(i); } }} style={{ cursor: "pointer" }}>
+                        <path ref={(el) => setStopRef(i, "leader", el)} fill="none" stroke={INK} strokeOpacity={0.5} vectorEffect="non-scaling-stroke" />
+                        <g ref={(el) => setStopRef(i, "inner", el)}>
+                          {wh ? (
+                            <>
+                              <circle r={13} fill={INK} stroke={current ? LIME : "#fff"} strokeWidth={2} />
+                              <path d={WAREHOUSE_D} fill={LIME} transform="translate(-8,-8) scale(0.667)" />
+                              <title>{L(s.name)}</title>
+                            </>
+                          ) : (
+                            <>
+                              <circle r={last ? 13 : 10} fill={last ? LIME : "#fff"} stroke={INK} strokeWidth={last ? 2 : 1.5} />
+                              <text textAnchor="middle" dominantBaseline="central" y={0.5} fontSize={last ? 11 : 9} fontWeight={700} fill={INK}>{i + 1}</text>
+                            </>
+                          )}
+                          {(i === 0 || last || wh) && (
+                            <text y={i === 0 || wh ? -22 : 29} textAnchor="middle" fontSize={12} fontWeight={600} fill={INK} stroke="#f8f7ff" strokeWidth={3} paintOrder="stroke">{first(s)}</text>
+                          )}
+                        </g>
+                      </g>
+                    );
+                  })}
+                  <g ref={vehicleRef} aria-hidden="true" data-mode={leg.mode}>
+                    <circle r={22} fill={PURPLE} fillOpacity={0.16} />
+                    <circle r={15} fill={INK} stroke={LIME} strokeWidth={1.5} />
+                    <g style={{ color: LIME }}>{mapIcon(leg.mode, 18)}</g>
+                  </g>
+                  {engine.regions.map((r) => {
+                    const sel = !route.country && r.id === region;
+                    const lines = r.id === "uae" ? ["United Arab", "Emirates"] : [L(r.label)];
+                    const w = Math.max(47, Math.max(...lines.map((v) => v.length)) * 6.2 + 22), h = lines.length > 1 ? 37 : 27;
+                    return (
+                      <g key={r.id} ref={(el) => setLabelRef(r.id, "g", el)} role="button" tabIndex={-1} aria-label={L(r.label)} aria-pressed={sel} style={{ display: "none", cursor: "pointer" }}
+                        onClick={() => selectRegion(r.id)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); selectRegion(r.id); } }}>
+                        <path ref={(el) => setLabelRef(r.id, "leader", el)} stroke={PURPLE} strokeOpacity={0.5} vectorEffect="non-scaling-stroke" />
+                        <circle ref={(el) => setLabelRef(r.id, "dot", el)} fill={PURPLE} />
+                        <g ref={(el) => setLabelRef(r.id, "label", el)}>
+                          <rect x={-w / 2} y={-h / 2} width={w} height={h} rx={7} fill={sel ? PURPLE : "#fff"} stroke={sel ? PURPLE : "#e4e1ff"} />
+                          <text textAnchor="middle" fontSize={10.5} fontWeight={600} fill={sel ? "#fff" : INK}>
+                            {lines.map((line, k) => <tspan key={k} x={0} y={lines.length > 1 ? (k ? 10 : -3) : 4}>{line}</tspan>)}
+                          </text>
+                        </g>
+                      </g>
+                    );
+                  })}
+                </svg>
+                {view === "world" && <p className="pointer-events-none absolute inset-x-0 bottom-2 text-center text-[11px]" style={{ color: "#373650" }}>Select a country to explore routes</p>}
+              </div>
+              <div className="relative z-10 m-3 flex items-center gap-4 border border-brand-100 bg-white px-4 py-3">
+                <span style={{ color: INK }}>{modeIcon(leg.mode, "h-6 w-6")}</span>
+                <div className="min-w-0 flex-1">
+                  <p className="wf-sub text-[9px] font-bold" style={{ color: "#686879" }}>Route preview</p>
+                  <strong data-leg-name className="block truncate text-sm" style={{ color: INK }}>{first(leg.from)} — {first(leg.to)}</strong>
+                </div>
+                <span className="text-xs tabular-nums" style={{ color: "#4b4b66" }}>{String(legIndex + 1).padStart(2, "0")} / {String(route.legs.length).padStart(2, "0")}</span>
+              </div>
+            </div>
+
             <div className="mt-3 grid grid-cols-[repeat(4,minmax(0,1fr))_auto] gap-2">
               {MODES.map((m) => {
                 const on = route.mode === m.key;
@@ -446,23 +586,24 @@ export default function Routes() {
                     <m.Icon className="h-5 w-5 shrink-0" />
                     <span className="hidden min-w-0 sm:block">
                       <span className="block text-xs font-bold">{m.label}</span>
-                      <span className="block whitespace-nowrap text-[10px] leading-tight opacity-80">{m.sub}</span>
+                      <small className="block text-[10px] leading-tight opacity-80">{m.sub}</small>
                     </span>
                   </button>
                 );
               })}
-              <button type="button" aria-pressed={playing} aria-label={playing ? "Pause route preview" : "Play route preview"} onClick={() => setPlaying((p) => !p)}
+              <button type="button" aria-pressed={playing} aria-label={motionLabel} onClick={() => setPaused((p) => !p)}
                 className="inline-flex min-h-[64px] w-14 items-center justify-center border transition-colors" style={{ background: "#fff", borderColor: "#e4e1ff", color: PURPLE }}>
                 {playing ? I.pause : I.play}
               </button>
             </div>
+
             {warehouses.length > 0 && (
               <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border border-brand-100 bg-white px-4 py-3">
-                <p className="text-xs" style={{ color: "#4b4b66" }}>Consolidation stops</p>
+                <span className="text-xs" style={{ color: "#4b4b66" }}>Consolidation stops</span>
                 <div className="flex flex-wrap gap-2">
                   {warehouses.map(({ s, i }) => (
-                    <button key={i} type="button" onClick={() => focusStop(i)} className="inline-flex items-center gap-2 border border-brand-100 px-3 py-2 text-xs font-bold transition-colors hover:border-brand-500" style={{ color: INK }}>
-                      {I.warehouse} {short(s)}
+                    <button key={i} type="button" onClick={() => { focusRouteStop(i); scrollToMap(); }} className="inline-flex items-center gap-2 border border-brand-100 px-3 py-2 text-xs font-bold transition-colors hover:border-brand-500" style={{ color: INK }}>
+                      {I.warehouse}<span>{first(s)}</span><span style={{ color: PURPLE }}>{I.zoom}</span>
                     </button>
                   ))}
                 </div>
@@ -470,69 +611,84 @@ export default function Routes() {
             )}
           </div>
 
-          {/* ---------- right: console ---------- */}
-          <div className="min-w-0 border border-brand-100 bg-white p-6 md:p-8">
+          {/* ================= route-console ================= */}
+          <section id="route-explorer" aria-labelledby="route-title" className="min-w-0 border border-brand-100 bg-white p-6 md:p-8">
             <p className="wf-sub text-[10px] font-bold" style={{ color: PURPLE }}>Explore your route</p>
-            <h3 className="mt-2 text-3xl font-bold tracking-tight" style={{ color: INK }}>{L(route.title)}</h3>
+            <h3 id="route-title" className="mt-2 text-3xl font-bold tracking-tight" style={{ color: INK }}>{A(L(route.title))}</h3>
 
-            {/* search */}
-            <p className="mt-4 text-sm" style={{ color: "#373650" }}>Where are we starting?</p>
-            <div className="relative mt-2">
-              <div className="flex items-center gap-3 border border-brand-100 px-4 focus-within:border-brand-500" style={{ color: "#686879" }}>
+            <div ref={searchRef} className="relative mt-4">
+              <label htmlFor="route-country-search" className="text-sm" style={{ color: "#373650" }}>{route.options.direction === "export" ? "Where are we delivering?" : "Where are we starting?"}</label>
+              <div className="mt-2 flex items-center gap-3 border border-brand-100 px-4 focus-within:border-brand-500" style={{ color: "#686879" }}>
                 {I.search}
-                <input value={query} onChange={(e) => { setQuery(e.target.value); setSearchOpen(true); }} onFocus={() => setSearchOpen(true)} onBlur={() => setTimeout(() => setSearchOpen(false), 150)}
-                  placeholder="Search a country…" aria-label="Search a country" className="min-h-12 w-full bg-transparent text-sm outline-none" style={{ color: INK }} />
-                {query && <button type="button" aria-label="Clear search" onClick={() => setQuery("")} style={{ color: PURPLE }}>{I.close}</button>}
+                <input id="route-country-search" ref={inputRef} type="search" autoComplete="off" role="combobox" aria-autocomplete="list" aria-expanded={listOpen} aria-controls="route-country-results"
+                  aria-activedescendant={listOpen && active >= 0 ? `country-result-${active}` : undefined} placeholder="Search a country…" value={query}
+                  onChange={(e) => { setQuery(e.target.value); setListOpen(true); setActive(-1); }}
+                  onFocus={(e) => { e.target.select(); setListOpen(true); setActive(-1); }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Escape") { setListOpen(false); setActive(-1); return; }
+                    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+                      e.preventDefault();
+                      setListOpen(true);
+                      if (!filtered.length) return;
+                      const next = (active + (e.key === "ArrowDown" ? 1 : -1) + filtered.length) % filtered.length;
+                      setActive(next);
+                      requestAnimationFrame(() => document.getElementById(`country-result-${next}`)?.scrollIntoView({ block: "nearest" }));
+                    }
+                    if (e.key === "Enter" && filtered.length) { e.preventDefault(); chooseCountry(filtered[Math.max(0, active)].id); }
+                  }}
+                  className="min-h-12 w-full bg-transparent text-sm outline-none [&::-webkit-search-cancel-button]:hidden" style={{ color: INK }} />
+                <button type="button" aria-label="Clear search" onClick={() => { setQuery(""); inputRef.current?.focus(); setListOpen(true); setActive(-1); }} style={{ color: PURPLE }}>{I.close}</button>
               </div>
-              {searchOpen && results.length > 0 && (
-                <ul role="listbox" className="absolute inset-x-0 top-full z-20 mt-1 max-h-72 overflow-auto border border-brand-100 bg-white shadow-lg">
-                  {results.map((c) => (
-                    <li key={c.id}>
-                      <button type="button" role="option" aria-selected={false} onMouseDown={(e) => e.preventDefault()} onClick={() => selectCountry(c.id)} className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm hover:bg-brand-50" style={{ color: INK }}>
-                        <span aria-hidden="true">{engine.flag(c.id)}</span>{L(c.label)}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-            <p className="mt-2 text-xs" style={{ color: "#686879" }}>{L(route.serviceNote) || { air: "Air cargo · to and from any country", rail: "Rail · China → Georgia, FCL & LCL", sea: "Sea · worldwide origins via a regional gateway", road: "Road · FTL & LTL" }[route.mode]}</p>
-
-            {/* regions */}
-            <div className="mt-5 border-y border-brand-100">
-              <button type="button" aria-expanded={regionsOpen} onClick={() => setRegionsOpen((o) => !o)} className="flex w-full items-center justify-between py-4 text-sm font-bold" style={{ color: INK }}>
-                Browse regions & corridors <span className={`transition-transform ${regionsOpen ? "rotate-180" : ""}`} style={{ color: PURPLE }}>{I.chevron}</span>
-              </button>
-              {regionsOpen && (
-                <div className="flex flex-wrap gap-2 pb-4">
-                  {regions.map((r) => (
-                    <button key={r.id} type="button" aria-pressed={r.id === region} onClick={() => selectRegion(r.id)} className="border px-3 py-1.5 text-xs font-bold transition-colors"
-                      style={r.id === region ? { background: PURPLE, borderColor: PURPLE, color: "#fff" } : { borderColor: "#e4e1ff", color: INK }}>{L(r.label)}</button>
-                  ))}
-                </div>
-              )}
+              <div id="route-country-results" role="listbox" hidden={!listOpen} className="absolute inset-x-0 top-full z-20 mt-1 max-h-72 overflow-auto border border-brand-100 bg-white shadow-lg">
+                {filtered.length ? filtered.map((c, i) => (
+                  <button key={c.id} id={`country-result-${i}`} type="button" role="option" aria-selected={i === active} onClick={() => chooseCountry(c.id)}
+                    className="flex w-full items-center justify-between gap-3 px-4 py-2.5 text-left text-sm hover:bg-brand-50" style={{ color: INK, background: i === active ? "#f1efff" : undefined }}>
+                    <span className="flex items-center gap-3"><span aria-hidden="true">{engine.flag(c.id)}</span>{L(c.label)}</span><span style={{ color: PURPLE }}>{I.arrowUR}</span>
+                  </button>
+                )) : <p className="px-4 py-3 text-sm" style={{ color: "#686879" }}>No matching country</p>}
+              </div>
+              <p data-caption className="mt-2 text-xs" style={{ color: "#686879" }}>{A(caption)}</p>
             </div>
 
-            {/* corridor */}
+            {route.mode === "air" && (
+              <div className="mt-4 flex items-center gap-3 border border-brand-100 px-4 py-3" style={{ background: "#f8f7ff" }}>
+                <span style={{ color: PURPLE }}><IconPlane className="h-5 w-5" /></span>
+                <div><strong className="wf-sub block text-[10px]" style={{ color: INK }}>Worldwide coverage</strong><span className="text-xs" style={{ color: "#4b4b66" }}>To and from Georgia</span></div>
+              </div>
+            )}
+
+            <details className="group mt-5 border-y border-brand-100">
+              <summary className="flex cursor-pointer list-none items-center justify-between py-4 text-sm font-bold [&::-webkit-details-marker]:hidden" style={{ color: INK }}>
+                <span>Browse regions & corridors</span><span className="transition-transform group-open:rotate-180" style={{ color: PURPLE }}>{I.caret}</span>
+              </summary>
+              <div role="group" aria-label="Select a country or region" className="flex flex-wrap gap-2 pb-4">
+                {regionButtons.map((r) => (
+                  <button key={r.id} type="button" aria-pressed={r.id === region} onClick={() => { selectRegion(r.id); scrollToMap(); }} className="rounded-full border px-3 py-1.5 text-xs transition-colors"
+                    style={r.id === region ? { background: PURPLE, borderColor: PURPLE, color: "#fff" } : { borderColor: "#e4e1ff", color: INK }}>
+                    {L(r.label)}{r.transit && route.mode !== "air" ? <small className="ml-1 opacity-70">Transit</small> : null}
+                  </button>
+                ))}
+              </div>
+            </details>
+
             <label className="mt-5 block text-sm" style={{ color: "#373650" }}>Choose a corridor
-              <select value={route.id} onChange={(e) => select(e.target.value, familyMemory.current[e.target.value] || {})} className="mt-2 min-h-12 w-full border border-brand-100 bg-white px-4 text-sm font-bold outline-none focus:border-brand-500" style={{ color: INK }}>
+              <select id="route-family" value={route.id} onChange={(e) => selectRoute(e.target.value)} className="mt-2 min-h-12 w-full border border-brand-100 bg-white px-4 text-sm outline-none focus:border-brand-500" style={{ color: INK }}>
                 {engine.families.filter((f) => f.mode === route.mode).map((f) => <option key={f.id} value={f.id}>{L(f.label)}</option>)}
               </select>
             </label>
-
-            {/* segmented fields side by side (direction, shipment type…) */}
-            {inlineFields.length > 0 && (
+            {segFields.length > 0 && (
               <div className="mt-5 flex flex-wrap gap-x-6 gap-y-4">
-                {inlineFields.map((f) => (
+                {segFields.map((f) => (
                   <fieldset key={f.key}>
                     <legend className="text-sm" style={{ color: "#373650" }}>{L(f.label)}</legend>
-                    <div className="mt-2 inline-flex flex-wrap gap-1 border border-brand-100 p-1">
+                    <div role="group" aria-label={L(f.label)} className="mt-2 inline-flex flex-wrap gap-1 border border-brand-100 p-1">
                       {f.options.map((o) => {
                         const on = route.options[f.key] === o.id;
-                        const lime = f.key === "load" && on;
                         return (
-                          <button key={o.id} type="button" aria-pressed={on} onClick={() => setField(f.key, o.id)} className="px-4 py-2.5 text-xs font-bold transition-colors"
-                            style={lime ? { background: LIME, color: INK } : on ? { background: PURPLE, color: "#fff" } : { color: "#4b4b66" }}>{L(o.label)}</button>
+                          <button key={o.id} type="button" aria-pressed={on} onClick={() => setOption(f.key, o.id)} className="px-4 py-2.5 text-xs transition-colors"
+                            style={f.key === "load" && on ? { background: LIME, color: INK } : on ? { background: PURPLE, color: "#fff" } : { color: "#4b4b66" }}>
+                            <strong className="font-normal">{A(L(o.label))}</strong>{o.description && <small className="block">{A(L(o.description))}</small>}
+                          </button>
                         );
                       })}
                     </div>
@@ -540,78 +696,77 @@ export default function Routes() {
                 ))}
               </div>
             )}
-
-            {/* selects and route cards */}
-            {blockFields.map((f) =>
-              f.select ? (
-                <label key={f.key} className="mt-5 block text-sm" style={{ color: "#373650" }}>{L(f.label)}
-                  <select value={route.options[f.key]} onChange={(e) => setField(f.key, e.target.value)} className="mt-2 block min-h-12 w-full max-w-xs border border-brand-100 bg-white px-4 text-sm font-bold outline-none focus:border-brand-500" style={{ color: INK }}>
-                    {f.options.map((o) => <option key={o.id} value={o.id}>{L(o.label)}</option>)}
-                  </select>
-                </label>
-              ) : (
-                <fieldset key={f.key} className="mt-5">
-                  <legend className="text-sm" style={{ color: "#373650" }}>{L(f.label)}</legend>
-                  <div className="mt-2 grid gap-2 sm:grid-cols-3">
-                    {f.options.map((o) => {
-                      const on = route.options[f.key] === o.id;
-                      return (
-                        <button key={o.id} type="button" aria-pressed={on} onClick={() => setField(f.key, o.id)} className="relative border p-3 text-left transition-colors"
-                          style={on ? { borderColor: PURPLE, boxShadow: `inset 0 0 0 1px ${PURPLE}`, background: "#f8f7ff" } : { borderColor: "#e4e1ff", background: "#fbfaff" }}>
-                          <span className="block pr-6 text-xs font-bold" style={{ color: INK }}>{L(o.label)}</span>
-                          {o.description && <span className="mt-2 block text-xs leading-5" style={{ color: "#686879" }}>{L(o.description)}</span>}
-                          {on && <span className="absolute right-2.5 top-2.5" style={{ color: PURPLE }}>{I.check}</span>}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </fieldset>
-              ),
-            )}
-
-            {/* details */}
-            <div className="mt-5 flex items-start gap-3 border-t border-brand-100 pt-4">
-              {route.load && <span className="shrink-0 px-2.5 py-1.5 text-[11px] font-bold" style={{ background: LIME, color: INK }}>{route.mode === "rail" ? "Rail " : ""}{route.load}</span>}
-              <p className="text-xs leading-5" style={{ color: "#4b4b66" }}>{route.notice ? L(route.notice) + " " : ""}{L(route.details)}</p>
-            </div>
-
-            {/* stages */}
-            <div className="mt-4 border-t border-brand-100">
-              <button type="button" aria-expanded={stagesOpen} onClick={() => setStagesOpen((o) => !o)} className="flex w-full items-center justify-between py-4 text-sm font-bold" style={{ color: INK }}>
-                Route stages · {route.stops.length} <span className={`transition-transform ${stagesOpen ? "rotate-180" : ""}`} style={{ color: PURPLE }}>{I.chevron}</span>
-              </button>
-              {stagesOpen && (
-                <ol className="space-y-1 pb-3">
-                  {route.stops.map((s, i) => {
-                    const cur = i === legIndex, done = i < legIndex;
+            {selectFields.map((f) => (
+              <label key={f.key} className="mt-5 block text-sm" style={{ color: "#373650" }}>{L(f.label)}
+                <select data-route-field={f.key} aria-label={L(f.label)} value={route.options[f.key]} onChange={(e) => setOption(f.key, e.target.value)}
+                  className="mt-2 block min-h-12 w-full max-w-xs border border-brand-100 bg-white px-4 text-sm outline-none focus:border-brand-500" style={{ color: INK }}>
+                  {f.options.map((o) => <option key={o.id} value={o.id}>{L(o.label)}</option>)}
+                </select>
+              </label>
+            ))}
+            {cardFields.map((f) => (
+              <fieldset key={f.key} className="mt-5">
+                <legend className="text-sm" style={{ color: "#373650" }}>{L(f.label)}</legend>
+                <div role="group" aria-label={L(f.label)} className="mt-2 grid gap-2 sm:grid-cols-3">
+                  {f.options.map((o) => {
+                    const on = route.options[f.key] === o.id;
                     return (
-                      <li key={i}>
-                        <button type="button" onClick={() => focusStop(i)} aria-current={cur ? "step" : undefined} className="flex w-full items-center gap-3 px-2 py-2 text-left text-xs transition-colors hover:bg-brand-50" style={{ background: cur ? "#f1efff" : undefined }}>
-                          <span className="w-6 font-bold tabular-nums" style={{ color: done || cur ? PURPLE : "#a99bff" }}>{String(i + 1).padStart(2, "0")}</span>
-                          <span className="min-w-0 flex-1">
-                            <span className="block truncate font-bold" style={{ color: INK }}>{L(s.name)}</span>
-                            {s.kind && <em className="not-italic" style={{ color: "#686879" }}>{KIND_LABEL[s.kind]}</em>}
-                          </span>
-                          <span className="inline-flex items-center gap-1.5" style={{ color: "#4b4b66" }}>
-                            {i < route.legs.length ? <>{modeIcon(route.legs[i].mode, "h-4 w-4")}{LEG_LABEL[route.legs[i].mode]}</> : <>{I.check}{route.options.direction === "export" ? "Arrival" : "Georgia"}</>}
-                          </span>
-                        </button>
-                      </li>
+                      <button key={o.id} type="button" aria-pressed={on} onClick={() => setOption(f.key, o.id)} className="relative border p-3 text-left transition-colors"
+                        style={on ? { borderColor: PURPLE, boxShadow: `inset 0 0 0 1px ${PURPLE}`, background: "#f8f7ff" } : { borderColor: "#e4e1ff", background: "#fbfaff" }}>
+                        <strong className="block pr-6 text-xs font-normal" style={{ color: INK }}>{A(L(o.label))}</strong>
+                        {o.description && <small className="mt-2 block text-xs leading-5" style={{ color: "#686879" }}>{A(L(o.description))}</small>}
+                        {on && <span className="absolute right-2.5 top-2.5" style={{ color: PURPLE }}>{I.check}</span>}
+                      </button>
                     );
                   })}
-                </ol>
-              )}
+                </div>
+              </fieldset>
+            ))}
+
+            <div className="mt-5 flex items-start gap-3 border-t border-brand-100 pt-4">
+              {route.load && <span className="shrink-0 px-2.5 py-1.5 text-[11px] font-bold" style={{ background: LIME, color: INK }}>{route.mode === "rail" ? "Rail " : ""}{route.load}</span>}
+              <p data-details className="text-xs leading-5" style={{ color: "#4b4b66" }}>{A(L(route.details))}</p>
             </div>
 
-            {/* scrubber */}
+            <details className="group mt-4 border-t border-brand-100">
+              <summary className="flex cursor-pointer list-none items-center justify-between py-4 text-sm font-bold [&::-webkit-details-marker]:hidden" style={{ color: INK }}>
+                <span>Route stages · {route.stops.length}</span><span className="transition-transform group-open:rotate-180" style={{ color: PURPLE }}>{I.caret}</span>
+              </summary>
+              <div className="flex gap-2">
+                <button type="button" onClick={() => { elapsed.current = 0; setPaused(false); draw(); }} className="inline-flex items-center gap-2 border border-brand-100 px-3 py-2 text-xs" style={{ color: INK }}>{I.replay}Replay route</button>
+                <button type="button" aria-pressed={playing} aria-label={motionLabel} onClick={() => setPaused((p) => !p)} className="inline-flex items-center justify-center border border-brand-100 px-3 py-2" style={{ color: INK }}>{playing ? I.pause : I.play}</button>
+              </div>
+              <ol className="mt-4 flex gap-4 overflow-x-auto pb-3">
+                {route.stops.map((s, i) => {
+                  const cur = i === legIndex, done = i < legIndex;
+                  return (
+                    <li key={i} className="min-w-[130px] flex-1">
+                      <button type="button" aria-label={`${i + 1}. ${L(s.name)}`} aria-current={cur ? "step" : undefined} onClick={() => { focusRouteStop(i); scrollToMap(); }} className="w-full text-left">
+                        <span className="flex items-center">
+                          <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border text-xs tabular-nums"
+                            style={cur ? { background: PURPLE, borderColor: PURPLE, color: "#fff", boxShadow: `0 0 0 4px ${PURPLE}22` } : done ? { borderColor: PURPLE, color: PURPLE } : { borderColor: "#e4e1ff", color: "#4b4b66" }}>{String(i + 1).padStart(2, "0")}</span>
+                          <span className="ml-2 h-px flex-1" style={{ background: "#e4e1ff" }} />
+                        </span>
+                        <strong className="mt-3 block text-sm font-normal" style={{ color: INK }}>{L(s.name)}</strong>
+                        {s.kind && <em className="block text-[11px] not-italic" style={{ color: PURPLE }}>{COPY[s.kind]}</em>}
+                        {i < route.legs.length
+                          ? <small className="mt-1 inline-flex items-center gap-1.5 text-[11px]" style={{ color: "#4b4b66" }}>{modeIcon(route.legs[i].mode, "h-3.5 w-3.5")}{COPY[route.legs[i].mode]}</small>
+                          : <small className="mt-1 inline-flex items-center gap-1.5 text-[11px]" style={{ color: "#4b4b66" }}>{I.check}{COPY[route.mode === "air" && route.options.direction === "export" ? "arrival" : "gateway"]}</small>}
+                      </button>
+                    </li>
+                  );
+                })}
+              </ol>
+            </details>
+
             <div className="mt-2 flex items-center gap-4">
-              <input ref={progressRef} type="range" min={0} max={100} step={0.1} defaultValue={0} aria-label="Preview progress"
-                onChange={(e) => { setPlaying(false); elapsed.current = (Number(e.target.value) / 100) * total * 0.9999; draw(); }}
+              <input id="route-progress" ref={progressRef} type="range" min={0} max={100} step={0.1} defaultValue={0} aria-label="Preview progress"
+                onInput={(e) => { setPaused(true); elapsed.current = Math.min(total - 0.001, (total * Number((e.target as HTMLInputElement).value)) / 100); draw(); }}
                 className="h-1.5 w-full cursor-pointer appearance-none bg-brand-100 accent-brand-500" />
-              <output ref={outputRef} className="w-10 text-right text-xs tabular-nums" style={{ color: "#4b4b66" }}>0%</output>
+              <output ref={outputRef} htmlFor="route-progress" className="w-10 text-right text-xs tabular-nums" style={{ color: "#4b4b66" }}>0%</output>
             </div>
-            <p className="mt-5 text-[11px]" style={{ color: "#686879" }}>{NOTE}{route.mode === "air" ? AIR_NOTE : ""}</p>
-          </div>
+            <p id="route-note" className="mt-5 text-[11px]" style={{ color: "#686879" }}>{COPY.note}{route.mode === "air" ? " " + COPY.airNote : ""}</p>
+          </section>
         </div>
       </div>
     </section>
