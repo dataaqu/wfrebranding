@@ -2,7 +2,7 @@ import { BrandFonts, Intro } from "@/components/brand/design-system";
 import Hero from "@/components/sections/Hero";
 import Facts from "@/components/sections/Facts";
 import Services from "@/components/sections/Services";
-import How from "@/components/sections/How";
+import Routes from "@/components/sections/Routes";
 import Rail from "@/components/sections/Rail";
 import Brokerage from "@/components/sections/Brokerage";
 import Quote from "@/components/sections/Quote";
@@ -13,8 +13,8 @@ export default function Page() {
     <BrandFonts /><Intro />
     <Hero />
     <Facts />
+    <Routes />
     <Services />
-    <How />
     <Rail />
     <Brokerage />
     <Quote />

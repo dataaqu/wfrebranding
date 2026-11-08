@@ -2,7 +2,7 @@ import { IconPlane, IconShip, IconTrain, IconTruck, IconDoc } from "@/components
 
 export const NAV = [
   ["Services", "#services"],
-  ["How it works", "#how"],
+  ["How it works", "#routes"],
   ["Rail from China", "#rail"],
   ["Contact", "#quote"],
 ];
