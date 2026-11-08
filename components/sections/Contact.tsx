@@ -1,8 +1,8 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { AnimatePresence, animate, motion, useMotionValue, useReducedMotion, useTransform } from "motion/react";
 import { chamfer, WMark } from "@/components/brand/design-system";
 import dotmap from "@/data/dotmap.json";
 
@@ -17,17 +17,33 @@ const PaperPlane = ({ className = "h-4 w-4" }: { className?: string }) => (
   </svg>
 );
 
-/** The send icon takes off: a small pull-back, then an accelerating arc up and to the right until it leaves the viewport. */
+/** The send icon takes off along one smooth cubic curve: it eases back a touch, then accelerates up and
+ *  to the right until it leaves the viewport. Same icon and colour throughout; it only turns to follow
+ *  its path and grows slightly as it "comes closer". */
 function FlyingPlane({ from, onDone }: { from: DOMRect; onDone: () => void }) {
-  const vw = window.innerWidth, vh = window.innerHeight;
-  const dx = vw - from.left + 120, dy = -(from.top + 160);
+  const t = useMotionValue(0);
+  const dx = window.innerWidth - from.left + 160, dy = -(from.top + 200);
+  // cubic Bézier control points (relative to the start)
+  const P = [[0, 0], [-34, 22], [dx * 0.45, dy * 0.02], [dx, dy]];
+  const bez = (u: number, k: 0 | 1) => { const v = 1 - u; return v * v * v * P[0][k] + 3 * v * v * u * P[1][k] + 3 * v * u * u * P[2][k] + u * u * u * P[3][k]; };
+  const der = (u: number, k: 0 | 1) => { const v = 1 - u; return 3 * v * v * (P[1][k] - P[0][k]) + 6 * v * u * (P[2][k] - P[1][k]) + 3 * u * u * (P[3][k] - P[2][k]); };
+  const x = useTransform(t, (u) => bez(u, 0));
+  const y = useTransform(t, (u) => bez(u, 1));
+  // icon nose points at -45°; blend from its resting angle into the path heading once it is moving forward
+  const rotate = useTransform(t, (u) => {
+    const heading = (Math.atan2(der(u, 1), der(u, 0)) * 180) / Math.PI + 45;
+    const w = Math.min(1, Math.max(0, (u - 0.18) / 0.3));
+    return heading * w * w * (3 - 2 * w);
+  });
+  const scale = useTransform(t, (u) => 1 + 1.1 * u * u);
+  useEffect(() => {
+    const c = animate(t, 1, { duration: 1.35, ease: [0.45, 0, 0.8, 0.35], onComplete: onDone });
+    return () => c.stop();
+  }, [t, onDone]);
   return createPortal(
-    <motion.div aria-hidden="true" className="pointer-events-none fixed z-[100] text-white"
-      style={{ left: from.left, top: from.top, width: from.width, height: from.height, filter: "drop-shadow(0 6px 10px rgba(4,4,43,0.25))" }}
-      initial={{ x: 0, y: 0, rotate: 0, scale: 1 }}
-      animate={{ x: [0, -10, dx * 0.32, dx], y: [0, 6, dy * 0.22, dy], rotate: [0, -12, 4, 12], scale: [1, 0.92, 1.9, 2.6], color: ["#ffffff", "#ffffff", "#644ff2", "#644ff2"] }}
-      transition={{ duration: 1.25, times: [0, 0.16, 0.5, 1], ease: [[0.3, 0, 0.6, 1], [0.4, 0, 0.9, 0.6], [0.5, 0, 1, 1]] }}
-      onAnimationComplete={onDone}>
+    <motion.div aria-hidden="true" className="pointer-events-none fixed z-[100] text-white will-change-transform"
+      style={{ left: from.left, top: from.top, width: from.width, height: from.height, x, y, rotate, scale,
+        filter: "drop-shadow(0 1px 1px rgba(4,4,43,0.45)) drop-shadow(0 6px 10px rgba(4,4,43,0.18))" }}>
       <PaperPlane className="h-full w-full" />
     </motion.div>,
     document.body,
@@ -62,6 +78,8 @@ export default function Contact() {
   const [sent, setSent] = useState<{ first: string; email: string } | null>(null);
   const [flight, setFlight] = useState<{ from: DOMRect; first: string; email: string } | null>(null);
   const planeRef = useRef<HTMLSpanElement>(null);
+  const flightRef = useRef(flight); flightRef.current = flight;
+  const landed = useRef(() => { const f = flightRef.current; if (f) setSent({ first: f.first, email: f.email }); setFlight(null); }).current;
 
   const FIELD = "h-12 w-full appearance-none bg-white px-4 text-[14px] text-[#04042b] outline-none ring-1 ring-inset ring-[#e4e1ff] transition-[box-shadow] duration-150 placeholder:text-[#9a99ad] [@media(hover:hover)]:hover:ring-[#c9c5ff] focus:ring-2 focus:ring-[#644ff2] [&:user-invalid]:ring-[#e5484d]";
   const LABEL = "mb-2 block text-[13px] font-medium text-[#04042b]";
@@ -134,7 +152,7 @@ export default function Contact() {
           </AnimatePresence>
         </div>
       </div>
-      {flight && <FlyingPlane from={flight.from} onDone={() => { setSent({ first: flight.first, email: flight.email }); setFlight(null); }} />}
+      {flight && <FlyingPlane from={flight.from} onDone={landed} />}
     </section>
   );
 }
