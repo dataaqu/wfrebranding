@@ -2,7 +2,8 @@
 
 import { useState, useRef, useEffect } from "react";
 import { AnimatePresence, animate, motion, useReducedMotion } from "motion/react";
-import { INTRO_REVEAL_AT, LogoHorizontal, WMark, chamfer, Button, IconPlane, IconShip, IconTrain, IconTruck, IconDoc, IconContainer, IconShield, IconClock, IconArrow } from "@/components/brand/design-system";
+import { useIntroDone } from "@/lib/intro";
+import { LogoHorizontal, WMark, chamfer, Button, IconPlane, IconShip, IconTrain, IconTruck, IconDoc, IconContainer, IconShield, IconClock, IconArrow } from "@/components/brand/design-system";
 import { SERIES, MILESTONES, KPIS, AXIS_MAX, SIDEBAR } from "@/data/landing";
 
 const EASE = [0.16, 1, 0.3, 1] as const;
@@ -17,6 +18,7 @@ const SHOW_TMS_MOCK = false;
 
 export default function Hero() {
   const reduce = useReducedMotion();
+  const introDone = useIntroDone(); // entrances start when the loader reveals the page
   const [lang, setLang] = useState("EN");
   const [hover, setHover] = useState<{ ri: number; si: number } | null>(null);
   const [tourTip, setTourTip] = useState(true);
@@ -70,10 +72,14 @@ export default function Hero() {
   const videoDesktop = useRef<HTMLVideoElement>(null);
   const videoMobile = useRef<HTMLVideoElement>(null);
   useEffect(() => {
+    // only the layout's visible video downloads and plays; the hidden twin stays at preload="none"
     [videoDesktop.current, videoMobile.current].forEach((v) => {
       if (!v) return;
       v.muted = true;
-      if (reduce) { v.pause(); } else { const p = v.play(); if (p && p.catch) p.catch(() => {}); }
+      const shown = v.offsetParent !== null;
+      if (reduce || !shown) { v.pause(); return; }
+      v.preload = "auto";
+      const p = v.play(); if (p && p.catch) p.catch(() => {});
     });
   }, [reduce]);
   const windowFrame = (
@@ -286,9 +292,9 @@ export default function Hero() {
             the preview runs on past the video into the page (Flexport-style). Navy scrim for legibility. Reduced motion: no autoplay, poster only. */}
         <div aria-hidden="true" className={`absolute inset-x-0 top-0 overflow-hidden ${collapsed ? "bottom-0" : "bottom-[180px] md:bottom-[280px]"}`} style={{ background: "#04042b", ...chamfer(72, "br") }}>
           <div style={{ position: "absolute", inset: 0, backgroundImage: "url('/assets/hero-port.png')", backgroundSize: "cover", backgroundPosition: "center 55%" }} />
-          <video ref={videoDesktop} className="hidden md:block" src="/assets/hero-720.webm" poster="/assets/hero-port.png" muted loop playsInline autoPlay={!reduce} preload="metadata"
+          <video ref={videoDesktop} className="hidden md:block" src="/assets/hero-720.webm" poster="/assets/hero-port.webp" muted loop playsInline preload="none"
             style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", objectFit: "cover" }} />
-          <video ref={videoMobile} className="md:hidden" src="/assets/hero-540.webm" poster="/assets/hero-port.png" muted loop playsInline autoPlay={!reduce} preload="metadata"
+          <video ref={videoMobile} className="md:hidden" src="/assets/hero-540.webm" poster="/assets/hero-port.webp" muted loop playsInline preload="none"
             style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", objectFit: "cover" }} />
           <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(4,4,43,0.62) 0%, rgba(4,4,43,0.46) 45%, rgba(4,4,43,0.3) 100%)" }} />
         </div>
@@ -330,8 +336,8 @@ export default function Hero() {
                   className="wf-head text-4xl md:text-6xl"
                   style={{ color: i === 0 ? "#a296f7" : "#ffffff" }}
                   initial={reduce ? false : { y: "110%" }}
-                  animate={{ y: "0%" }}
-                  transition={{ duration: 0.9, delay: reduce ? 0 : INTRO_REVEAL_AT + i * 0.08, ease: [0.16, 1, 0.3, 1] }}
+                  animate={{ y: reduce || introDone ? "0%" : "110%" }}
+                  transition={{ duration: 0.9, delay: reduce ? 0 : i * 0.08, ease: [0.16, 1, 0.3, 1] }}
                 >{line}</motion.div>
               </div>
             ))}
@@ -339,8 +345,8 @@ export default function Hero() {
           <motion.div
             data-anim="hero-copy"
             initial={reduce ? false : { opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: reduce ? 0 : INTRO_REVEAL_AT + 0.25, ease: [0.16, 1, 0.3, 1] }}
+            animate={reduce || introDone ? { opacity: 1, y: 0 } : { opacity: 0, y: 16 }}
+            transition={{ duration: 0.6, delay: reduce ? 0 : 0.25, ease: [0.16, 1, 0.3, 1] }}
           >
             <p className="mx-auto mt-5 max-w-xl text-base leading-7 md:text-lg" style={{ color: "rgba(255,255,255,0.85)" }}>
               Air, sea, rail and road freight plus customs brokerage — one partner moving your cargo from China, Europe and beyond to your door in Georgia.
@@ -353,8 +359,8 @@ export default function Hero() {
           data-anim="hero-dashboard"
           className="relative z-10 mx-auto flex flex-col px-6 md:px-10"
           initial={reduce ? false : { y: 40, maxWidth: 1152 }} // transform only: an opacity fade on an ancestor disables the button's backdrop blur until it ends
-          animate={{ y: 0, maxWidth: zoomed ? 1440 : 1152 }}
-          transition={{ default: { duration: 1, delay: reduce ? 0 : INTRO_REVEAL_AT + 0.35, ease: EASE }, maxWidth: { duration: reduce ? 0 : 0.55, ease: EASE } }}
+          animate={{ y: reduce || introDone ? 0 : 40, maxWidth: zoomed ? 1440 : 1152 }}
+          transition={{ default: { duration: 1, delay: reduce ? 0 : 0.35, ease: EASE }, maxWidth: { duration: reduce ? 0 : 0.55, ease: EASE } }}
         >
           <AnimatePresence mode="popLayout" initial={false}>
           {closed ? (

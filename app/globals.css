@@ -128,3 +128,8 @@
 /* route-map stops: no browser focus box; keyboard focus gets a brand ring on the marker */
 [data-stop] { outline: none; }
 [data-stop]:focus-visible > g > circle:first-of-type { stroke: #644ff2; stroke-width: 3; }
+
+/* Intro fallback: if the page's JS is slow to arrive, fade the logo in from CSS after 1.2s
+   (animations override the inline opacity:0 that the scripted intro starts from). */
+@keyframes wf-intro-show { to { opacity: 1; } }
+.wf-intro-static .wf-mark-body, .wf-intro-static .wf-mark-dot, .wf-intro-static .wf-letter { animation: wf-intro-show 0.5s ease 1.2s forwards; }

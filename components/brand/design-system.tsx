@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { motion, useReducedMotion, useAnimate } from "motion/react";
 import { stagger } from "motion";
+import { markIntroDone, preloadCritical } from "@/lib/intro";
 
 /* ------------------------------------------------------------------ */
 /* Fonts — Loos Wide from assets/fonts (preview only; web licence is   */
@@ -12,9 +13,9 @@ export function BrandFonts() {
   return (
     <style>{`
 .wf-head{font-family:"Loos Wide","Inter",ui-sans-serif,system-ui,sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:-0.01em;line-height:0.95 !important}
-@font-face{font-family:"Loos Wide";src:url("/assets/fonts/fonnts.com-Loos_Wide_Light.otf") format("opentype");font-weight:300;font-display:swap}
-@font-face{font-family:"Loos Wide";src:url("/assets/fonts/fonnts.com-Loos_Wide_Medium.otf") format("opentype");font-weight:400 500;font-display:swap}
-@font-face{font-family:"Loos Wide";src:url("/assets/fonts/fonnts.com-Loos_Wide_Bold.otf") format("opentype");font-weight:600 900;font-display:swap}
+@font-face{font-family:"Loos Wide";src:url("/assets/fonts/loos-wide-light.woff2") format("woff2");font-weight:300;font-display:swap}
+@font-face{font-family:"Loos Wide";src:url("/assets/fonts/loos-wide-medium.woff2") format("woff2");font-weight:400 500;font-display:swap}
+@font-face{font-family:"Loos Wide";src:url("/assets/fonts/loos-wide-bold.woff2") format("woff2");font-weight:600 900;font-display:swap}
 .wf-head span{font-size:inherit !important;line-height:inherit !important;font-weight:inherit;letter-spacing:inherit}
 .wf-sub{font-family:"Loos Wide","Inter",ui-sans-serif,system-ui,sans-serif;font-weight:500;text-transform:uppercase;letter-spacing:0.04em}
 `}</style>
@@ -89,12 +90,12 @@ export function LogoHorizontal({ markColor = "var(--color-brand-500)", wordColor
 /*   0.60  W fills                                .30                   */
 /*   0.85  dots appear, 100 ms apart              .15                   */
 /*   1.05  WEFORWARD typed letter by letter       .12 each, 70 ms       */
-/*   2.20  logo scales down + fades               power-in .40          */
-/*   2.35  4 purple-tint panels wipe up           expo-inOut .55, 70 ms */
-/*   3.15  panels continue up, revealing page     expo-inOut .65, 70 ms */
+/*   ~1.9  logo written; if critical assets (lib/intro) are still       */
+/*         loading, a lime progress bar shows and the intro waits       */
+/*         (max 6 s) — then: logo out, panels wipe up and away and     */
+/*         markIntroDone() starts the page's own entrance animations.   */
 /* Reduced motion: static logo, then a 300 ms fade; no panels.         */
 /* ------------------------------------------------------------------ */
-export const INTRO_REVEAL_AT = 3.35;
 const EXPO_OUT = [0.16, 1, 0.3, 1] as const;
 const EXPO_IN_OUT = [0.87, 0, 0.13, 1] as const;
 const BACK_OUT = [0.34, 1.56, 0.64, 1] as const;
@@ -105,30 +106,67 @@ const PANELS = ["#644ff2", "#8373f5", "#a296f7", "#c1b9fa"];
 export function Intro({ onDone }: { onDone?: () => void }) {
   const reduce = useReducedMotion();
   const [scope, animate] = useAnimate();
+  const [progress, setProgress] = useState(0);
+  const [waiting, setWaiting] = useState(false);
+  const [hydrated, setHydrated] = useState(false); // until then a CSS fallback fades the logo in (slow JS)
 
   useEffect(() => {
+    let alive = true;
+    const html = document.documentElement, prevOverflow = html.style.overflow;
+    html.style.overflow = "hidden"; // no scrolling under the loader
+    // assets load in the background while the logo is written; on slow networks the reveal waits for
+    // them (progress bar), but never longer than MAX_WAIT so the page is always reachable
+    const MAX_WAIT = 6000;
+    const ready = Promise.race([preloadCritical((p) => alive && setProgress(p)), new Promise<void>((r) => setTimeout(r, MAX_WAIT))]);
+    const reveal = () => { html.style.overflow = prevOverflow; markIntroDone(); };
+    // JS arrived late (slow network): the CSS fallback already showed the logo, so don't redraw it
+    const late = performance.now() > 1100;
+    if (late) scope.current.querySelectorAll(".wf-mark-body, .wf-mark-dot, .wf-letter").forEach((el: HTMLElement) => { el.style.opacity = "1"; });
+    setHydrated(true);
+
     if (reduce) {
-      const c = animate(scope.current, { opacity: [1, 0] }, { duration: 0.3, delay: 0.8 });
-      c.then(() => onDone?.());
-      return () => c.stop();
+      ready.then(() => {
+        if (!alive) return;
+        reveal();
+        animate(scope.current, { opacity: [1, 0] }, { duration: 0.3 }).then(() => onDone?.());
+      });
+      return () => { alive = false; html.style.overflow = prevOverflow; };
     }
-    const c = animate([
+
+    // 1) write the logo (≈2 s) — skipped when the static fallback is already showing it
+    const write = late ? animate(scope.current, { opacity: 1 }, { duration: 0 }) : animate([
       [".wf-mark-body-line", { pathLength: [0, 1], opacity: [1, 1] }, { duration: 0.8, ease: "easeInOut", at: 0 }],
       [".wf-mark-body", { opacity: [0, 1] }, { duration: 0.3, ease: "easeOut", at: 0.6 }],
       [".wf-mark-body-line", { opacity: [1, 0] }, { duration: 0.2, ease: "easeOut", at: 0.85 }],
       [".wf-mark-dot", { opacity: [0, 1] }, { duration: 0.15, ease: "easeOut", delay: stagger(0.1), at: 0.85 }],
       [".wf-letter", { opacity: [0, 1] }, { duration: 0.12, ease: "easeOut", delay: stagger(0.07), at: 1.05 }],
-      [".wf-intro-logo", { scale: [1, 0.9], opacity: [1, 0], y: [0, -24] }, { duration: 0.4, ease: POWER_IN, at: 2.2 }],
-      [".wf-panel", { y: ["100%", "0%"] }, { duration: 0.55, ease: EXPO_IN_OUT, delay: stagger(0.07), at: 2.35 }],
-      [".wf-intro-bg", { opacity: [1, 0] }, { duration: 0.01, at: 3.1 }],
-      [".wf-panel", { y: ["0%", "-100%"] }, { duration: 0.65, ease: EXPO_IN_OUT, delay: stagger(0.07), at: 3.15 }],
     ]);
-    c.then(() => onDone?.());
-    return () => c.stop();
+    let exit: ReturnType<typeof animate> | null = null, revealTimer = 0;
+    write.then(() => {
+      if (!alive) return;
+      // 2) still loading? show the progress bar and wait
+      let loaded = false;
+      ready.then(() => { loaded = true; });
+      setTimeout(() => { if (alive && !loaded) setWaiting(true); }, 250);
+      return ready;
+    }).then(() => {
+      if (!alive) return;
+      setWaiting(false);
+      // 3) logo out, panels wipe up and away; the page's own entrances start as the panels leave
+      exit = animate([
+        [".wf-intro-logo", { scale: [1, 0.9], opacity: [1, 0], y: [0, -24] }, { duration: 0.4, ease: POWER_IN, at: 0.15 }],
+        [".wf-panel", { y: ["100%", "0%"] }, { duration: 0.55, ease: EXPO_IN_OUT, delay: stagger(0.07), at: 0.3 }],
+        [".wf-intro-bg", { opacity: [1, 0] }, { duration: 0.01, at: 1.05 }],
+        [".wf-panel", { y: ["0%", "-100%"] }, { duration: 0.65, ease: EXPO_IN_OUT, delay: stagger(0.07), at: 1.1 }],
+      ]);
+      revealTimer = window.setTimeout(reveal, 1300);
+      exit.then(() => onDone?.());
+    });
+    return () => { alive = false; write.stop(); exit?.stop(); clearTimeout(revealTimer); html.style.overflow = prevOverflow; };
   }, []);
 
   return (
-    <div ref={scope} className="pointer-events-none fixed inset-0 z-50 overflow-hidden" aria-hidden="true">
+    <div ref={scope} className={`pointer-events-none fixed inset-0 z-50 overflow-hidden ${hydrated ? "" : "wf-intro-static"}`}>
       <div className="wf-intro-bg absolute inset-0 bg-ink-950" />
       <div className="wf-intro-logo absolute inset-0 flex flex-col items-center justify-center gap-7">
         <svg viewBox="-4 -4 192 245" className="h-28 w-auto overflow-visible md:h-36">
@@ -142,6 +180,11 @@ export function Intro({ onDone }: { onDone?: () => void }) {
           )}
         </svg>
         <Wordmark className="h-8 w-auto md:h-11" animated={!reduce} />
+        {/* shown only if assets are still loading once the logo is written */}
+        <div role="progressbar" aria-label="Loading" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progress * 100)}
+          className={`h-[2px] w-40 overflow-hidden bg-white/10 transition-opacity duration-300 md:w-56 ${waiting ? "opacity-100" : "opacity-0"}`}>
+          <div className="h-full origin-left bg-[#d5f476] transition-transform duration-500 ease-out" style={{ transform: `scaleX(${Math.max(0.04, progress)})` }} />
+        </div>
       </div>
       {!reduce && (
         <div className="absolute inset-0 flex">

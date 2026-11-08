@@ -45,14 +45,16 @@ function CardChrome({ title, reduce }: { title: string; reduce: boolean }) {
   );
 }
 
-function Video({ name, active, eager }: { name: string; active: boolean; eager: boolean }) {
+function Video({ name, active, eager, load }: { name: string; active: boolean; eager: boolean; load: boolean }) {
   const ref = useRef<HTMLVideoElement>(null);
   useEffect(() => {
     const v = ref.current;
-    if (!v) return;
+    if (!v || !load) return;
     if (active) void v.play().catch(() => {});
     else v.pause();
-  }, [active]);
+  }, [active, load]);
+  // nothing is fetched (not even the poster) until the section is near the viewport
+  if (!load) return <div className="h-full w-full bg-[#0b0b1f]" />;
   return (
     <video ref={ref} muted loop playsInline preload={eager ? "auto" : "metadata"}
       poster={`/assets/services/${name}.jpg`} aria-hidden="true" className="h-full w-full object-cover">
@@ -60,6 +62,30 @@ function Video({ name, active, eager }: { name: string; active: boolean; eager: 
       <source src={`/assets/services/${name}.mp4`} type="video/mp4" />
     </video>
   );
+}
+
+/** true once `ref` comes within `margin` of the viewport (stays true) */
+function useNear(ref: React.RefObject<HTMLElement | null>, margin = "800px") {
+  const [near, setNear] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || near) return;
+    const io = new IntersectionObserver(([e]) => { if (e.isIntersecting) { setNear(true); io.disconnect(); } }, { rootMargin: margin });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [ref, margin, near]);
+  return near;
+}
+/** which layout is on screen, so hidden duplicates never download media */
+function useDesktop() {
+  const [d, setD] = useState<boolean | null>(null);
+  useEffect(() => {
+    const m = window.matchMedia("(min-width: 1024px)");
+    const f = () => setD(m.matches); f();
+    m.addEventListener("change", f);
+    return () => m.removeEventListener("change", f);
+  }, []);
+  return d;
 }
 
 // One word whose colour follows scroll: muted → brand green (leading edge) → navy.
@@ -94,12 +120,15 @@ export default function Services() {
   const [active, setActive] = useState(0);
   const reduce = useReducedMotion();
   const steps = useRef<HTMLDivElement>(null);
+  const sectionRef = useRef<HTMLElement>(null);
+  const near = useNear(sectionRef);
+  const desktop = useDesktop();
   // Active step = the one crossing the viewport centre; derived from scroll so jumps never leave it stale.
   const { scrollYProgress } = useScroll({ target: steps, offset: ["start center", "end center"] });
   useMotionValueEvent(scrollYProgress, "change", (v) => setActive(Math.min(SERVICES.length - 1, Math.max(0, Math.floor(v * SERVICES.length)))));
 
   return (
-    <section id="services" aria-labelledby="services-title" className="bg-white pb-16 pt-6">
+    <section ref={sectionRef} id="services" aria-labelledby="services-title" className="bg-white pb-16 pt-6">
       <h2 id="services-title" className="sr-only">Services</h2>
       <div className="mx-auto max-w-6xl px-6 md:px-10 lg:hidden">
         <Reveal id="services-head"><p aria-hidden="true" className="wf-head text-4xl" style={{ color: NAVY }}>Services</p></Reveal>
@@ -121,7 +150,7 @@ export default function Services() {
                   transition={reduce ? { duration: 0 } : on
                     ? { opacity: { duration: 0.9, ease: EASE }, scale: { duration: 1.6, ease: EASE } }
                     : { opacity: { duration: 0.5, delay: 0.7, ease: "linear" }, scale: { duration: 0, delay: 1.2 } }}>
-                  <Video name={sv.media} active={on} eager={Math.abs(i - active) <= 1} />
+                  <Video name={sv.media} active={on} eager={Math.abs(i - active) <= 1} load={near && desktop === true} />
                 </motion.div>
               );
             })}
@@ -137,10 +166,12 @@ export default function Services() {
             <h3 className="sr-only">{s.title}</h3>
             <p className="text-xl leading-snug tracking-tight" style={{ color: NAVY }}>{s.text}</p>
             <div className="relative mt-6 aspect-[4/5] overflow-hidden bg-[#0b0b1f]">
-              <video muted loop playsInline autoPlay preload="none" poster={`/assets/services/${s.media}.jpg`} aria-hidden="true" className="h-full w-full object-cover">
-                <source src={`/assets/services/${s.media}.webm`} type="video/webm" />
-                <source src={`/assets/services/${s.media}.mp4`} type="video/mp4" />
-              </video>
+              {near && desktop === false && (
+                <video muted loop playsInline autoPlay preload="none" poster={`/assets/services/${s.media}.jpg`} aria-hidden="true" className="h-full w-full object-cover">
+                  <source src={`/assets/services/${s.media}.webm`} type="video/webm" />
+                  <source src={`/assets/services/${s.media}.mp4`} type="video/mp4" />
+                </video>
+              )}
               <CardChrome title={s.title} reduce />
             </div>
           </article>

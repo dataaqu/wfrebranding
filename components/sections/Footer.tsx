@@ -64,7 +64,7 @@ function Box({ b, i, progress }: { b: (typeof BOXES)[number]; i: number; progres
     <motion.div className="relative shrink-0 hover:z-10" style={{ y, height: "var(--box-h)", width: `calc(var(--box-h) * ${b.w / BOX_H})`, marginTop: b.lift }}>
       <div className="relative h-full w-full transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-3">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={`/assets/containers/${b.src}.webp`} alt="" draggable={false} className="absolute inset-0 h-full w-full select-none" />
+        <img src={`/assets/containers/${b.src}.webp`} alt="" loading="lazy" decoding="async" draggable={false} className="absolute inset-0 h-full w-full select-none" />
         <div className="absolute inset-0 flex flex-col items-center justify-start gap-[6%] pt-[13%]">
           <WMark className="h-[30%] w-auto" color={b.mark} />
           <Wordmark className="h-[11%] w-auto" color={b.word} />
