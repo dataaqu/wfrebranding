@@ -372,14 +372,10 @@ export default function Routes() {
     let raf = 0;
     const fit = (animate: boolean) => {
       const width = host.clientWidth || 680, height = host.clientHeight || 420;
-      // desktop: the console floats over the right of the map and controls over the bottom-left — keep the route clear of them
-      const desk = !expanded && matchMedia("(min-width: 1024px)").matches;
-      const panelW = panelRef.current?.offsetWidth || 0, dockH = dockRef.current?.offsetHeight || 0;
-      // keep the route out of the faded edges (10% sides, 14% top/bottom) as well as from under the floating UI
-      const fadeX = expanded ? 0 : width * 0.1, fadeY = expanded ? 0 : height * 0.14;
-      insets.current = desk
-        ? { left: fadeX, top: fadeY, right: panelW + 48, bottom: Math.max(dockH + 32, fadeY) }
-        : { left: fadeX * 0.6, top: fadeY, right: fadeX * 0.6, bottom: Math.max(96, fadeY) };
+      // keep the route clear of the faded edges, the title (top) and the preview dock (bottom)
+      const dockH = dockRef.current?.offsetHeight || 0;
+      const fadeX = expanded ? 24 : width * 0.1, fadeY = expanded ? 24 : height * 0.14;
+      insets.current = { left: fadeX, right: fadeX, top: fadeY + (expanded ? 0 : 90), bottom: height * 0.08 + dockH + 24 };
       const ins = insets.current, visW = Math.max(200, width - ins.left - ins.right), visH = Math.max(160, height - ins.top - ins.bottom);
       let vb: Box;
       if (view === "focus") vb = focusBox(route, focused, visW, visH);
@@ -509,14 +505,167 @@ export default function Routes() {
           <p className="max-w-[17rem] text-[15px] leading-7" style={{ color: "#4b4b66" }}>Choose a country. Explore the connections. See every stage.</p>
         </div>
 
+
+        {/* ===== 1. controls: choose ===== */}
+        <section ref={panelRef} id="route-explorer" aria-labelledby="route-title" className={`relative z-20 mt-10 bg-white p-5 md:p-6 ${SURFACE}`} style={chamfer(24, "tr")}>
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
+            <div className="lg:w-[380px] lg:shrink-0">
+              <span className={LABEL} style={{ color: "#686879" }}>Transport</span>
+              <div className="mt-2.5">
+                {/* transport modes: one bar */}
+            <div className="flex items-stretch bg-[#f3f2fd] p-1">
+              <div className="grid flex-1 grid-cols-4 gap-1">
+                {MODES.map((m) => {
+                  const on = route.mode === m.key;
+                  return (
+                    <button key={m.key} type="button" aria-pressed={on} aria-label={`${m.label} · ${m.sub}`} onClick={() => selectMode(m.key)}
+                      className={`relative flex min-h-[56px] items-center justify-center gap-2.5 px-2 text-left sm:justify-start sm:px-3 ${PRESS} ${on ? "" : "[@media(hover:hover)]:hover:bg-[#f3f2fd]"}`}
+                      style={on ? { background: INK, color: "#fff" } : { color: INK }}>
+                      <span style={{ color: on ? LIME : PURPLE }}><m.Icon className="h-5 w-5 shrink-0" /></span>
+                      <span className="hidden min-w-0 sm:block">
+                        <span className="block text-xs font-semibold">{m.label}</span>
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+              <span className="mx-1 w-px self-stretch" style={{ background: "#ecebf8" }} />
+              <button type="button" aria-pressed={playing} aria-label={motionLabel} onClick={() => setPaused((p) => !p)}
+                className={`inline-flex w-12 items-center justify-center ${PRESS} [@media(hover:hover)]:hover:bg-[#f3f2fd]`} style={{ color: PURPLE }}>
+                {playing ? I.pause : I.play}
+              </button>
+            </div>
+              </div>
+            </div>
+            <div ref={searchRef} className="relative min-w-0 flex-1">
+              <label htmlFor="route-country-search" className={LABEL} style={{ color: "#686879" }}>{route.options.direction === "export" ? "Where are we delivering?" : "Where are we starting?"}</label>
+              <div className="relative mt-2.5 flex items-center gap-3 bg-[#f3f2fd] px-4 ring-1 ring-inset ring-transparent transition-[box-shadow,background-color] duration-150 focus-within:bg-white focus-within:ring-brand-500" style={{ color: "#686879" }}>
+                {I.search}
+                <input id="route-country-search" ref={inputRef} type="search" autoComplete="off" role="combobox" aria-autocomplete="list" aria-expanded={listOpen} aria-controls="route-country-results"
+                  aria-activedescendant={listOpen && active >= 0 ? `country-result-${active}` : undefined} placeholder="Search a country…" value={query}
+                  onChange={(e) => { setQuery(e.target.value); setListOpen(true); setActive(-1); }}
+                  onFocus={(e) => { e.target.select(); setListOpen(true); setActive(-1); }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Escape") { setListOpen(false); setActive(-1); return; }
+                    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+                      e.preventDefault();
+                      setListOpen(true);
+                      if (!filtered.length) return;
+                      const next = (active + (e.key === "ArrowDown" ? 1 : -1) + filtered.length) % filtered.length;
+                      setActive(next);
+                      requestAnimationFrame(() => document.getElementById(`country-result-${next}`)?.scrollIntoView({ block: "nearest" }));
+                    }
+                    if (e.key === "Enter" && filtered.length) { e.preventDefault(); chooseCountry(filtered[Math.max(0, active)].id); }
+                  }}
+                  className="min-h-12 w-full bg-transparent text-sm outline-none placeholder:text-[#9a99b3] [&::-webkit-search-cancel-button]:hidden" style={{ color: INK }} />
+                <button type="button" aria-label="Clear search" onClick={() => { setQuery(""); inputRef.current?.focus(); setListOpen(true); setActive(-1); }} className={`inline-flex h-7 w-7 items-center justify-center ${PRESS} ${query ? "opacity-100" : "pointer-events-none opacity-0"}`} style={{ color: PURPLE }}>{I.close}</button>
+              </div>
+              <div id="route-country-results" role="listbox" hidden={!listOpen}
+                className="absolute inset-x-0 top-full z-20 mt-2 max-h-72 origin-top overflow-auto bg-white py-1 shadow-[0_24px_48px_-16px_rgba(4,4,43,0.28)] ring-1 ring-[#ecebf8] transition-[opacity,transform] duration-150 ease-out [@starting-style]:scale-[0.98] [@starting-style]:opacity-0">
+                {filtered.length ? filtered.map((c, i) => (
+                  <button key={c.id} id={`country-result-${i}`} type="button" role="option" aria-selected={i === active} onClick={() => chooseCountry(c.id)}
+                    className="group flex w-full items-center justify-between gap-3 px-4 py-2.5 text-left text-sm [@media(hover:hover)]:hover:bg-[#f3f2fd]" style={{ color: INK, background: i === active ? "#f1efff" : undefined }}>
+                    <span className="flex items-center gap-3"><span aria-hidden="true" className="text-base">{engine.flag(c.id)}</span>{L(c.label)}</span>
+                    <span className="opacity-40 transition-opacity duration-150 group-hover:opacity-100" style={{ color: PURPLE }}>{I.arrowUR}</span>
+                  </button>
+                )) : <p className="px-4 py-3 text-sm" style={{ color: "#686879" }}>No matching country</p>}
+              </div>
+              <p data-caption className="mt-2.5 text-xs leading-5" style={{ color: "#686879" }}>{A(caption)}</p>
+            </div>
+            <label className="block w-full lg:w-72">
+              <span className={LABEL} style={{ color: "#686879" }}>Choose a corridor</span>
+              <span className="relative mt-2.5 block">
+                <select id="route-family" value={route.id} onChange={(e) => selectRoute(e.target.value)} className={`${FIELD} pr-10 font-semibold`} style={{ color: INK }}>
+                  {engine.families.filter((f) => f.mode === route.mode).map((f) => <option key={f.id} value={f.id}>{L(f.label)}</option>)}
+                </select>
+                <Caret />
+              </span>
+            </label>
+          </div>
+          <div className="mt-5 flex flex-wrap items-start gap-x-6 gap-y-5 border-t pt-5" style={{ borderColor: "#ecebf8" }}>
+            {segFields.length > 0 && (
+              <div className="flex flex-wrap gap-x-5 gap-y-4">
+                {segFields.map((f) => (
+                  <fieldset key={f.key} className="min-w-0">
+                    <legend className={LABEL} style={{ color: "#686879" }}>{L(f.label)}</legend>
+                    <div role="group" aria-label={L(f.label)} className="mt-2.5 inline-flex flex-wrap gap-1 bg-[#f3f2fd] p-1">
+                      {f.options.map((o) => {
+                        const on = route.options[f.key] === o.id;
+                        return (
+                          <button key={o.id} type="button" aria-pressed={on} onClick={() => setOption(f.key, o.id)}
+                            className={`px-4 py-2.5 text-xs ${PRESS}`}
+                            style={f.key === "load" && on ? { background: LIME, color: INK, boxShadow: "0 1px 2px rgba(4,4,43,0.12)" } : on ? { background: INK, color: "#fff" } : { color: "#4b4b66" }}>
+                            <strong className={on ? "font-semibold" : "font-normal"}>{A(L(o.label))}</strong>{o.description && <small className="block">{A(L(o.description))}</small>}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </fieldset>
+                ))}
+              </div>
+            )}
+            {selectFields.map((f) => (
+              <label key={f.key} className="block">
+                <span className={LABEL} style={{ color: "#686879" }}>{L(f.label)}</span>
+                <span className="relative mt-2.5 block max-w-xs">
+                  <select data-route-field={f.key} aria-label={L(f.label)} value={route.options[f.key]} onChange={(e) => setOption(f.key, e.target.value)} className={`${FIELD} pr-10`} style={{ color: INK }}>
+                    {f.options.map((o) => <option key={o.id} value={o.id}>{L(o.label)}</option>)}
+                  </select>
+                  <Caret />
+                </span>
+              </label>
+            ))}
+            {cardFields.map((f) => (
+              <fieldset key={f.key} className="min-w-0 flex-1 basis-[420px]">
+                <legend className={LABEL} style={{ color: "#686879" }}>{L(f.label)}</legend>
+                <div role="group" aria-label={L(f.label)} className="mt-2.5 grid gap-2 sm:grid-cols-3">
+                  {f.options.map((o, i) => {
+                    const on = route.options[f.key] === o.id;
+                    return (
+                      <button key={o.id} type="button" aria-pressed={on} onClick={() => setOption(f.key, o.id)}
+                        className={`relative flex flex-col p-4 text-left ${PRESS} ${on ? "" : "[@media(hover:hover)]:hover:bg-[#ecebfc]"}`}
+                        style={on ? { background: "#fff", boxShadow: `inset 0 0 0 2px ${PURPLE}` } : { background: "#f3f2fd" }}>
+                        <span className="wf-sub text-[10px] font-bold tabular-nums" style={{ color: on ? PURPLE : "#a3a2bd" }}>{String(i + 1).padStart(2, "0")}</span>
+                        <strong className="mt-2 block pr-5 text-[13px] font-semibold leading-snug" style={{ color: INK }}>{A(L(o.label))}</strong>
+                        {o.description && <small className="mt-1.5 block text-[11px] leading-5" style={{ color: "#686879" }}>{A(L(o.description))}</small>}
+                        <span className={`absolute right-3 top-3 transition-[opacity,transform] duration-200 ease-out ${on ? "scale-100 opacity-100" : "scale-90 opacity-0"}`} style={{ color: PURPLE }}>{I.check}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </fieldset>
+            ))}
+          </div>
+          <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t pt-4" style={{ borderColor: "#ecebf8" }}>
+            <details className="group/regions">
+              <summary className="inline-flex cursor-pointer list-none items-center gap-2 py-1 [&::-webkit-details-marker]:hidden">
+                <span className={LABEL} style={{ color: INK }}>Browse regions & corridors</span>
+                <span className="transition-transform duration-200 ease-out group-open/regions:rotate-180" style={{ color: PURPLE }}>{I.caret}</span>
+              </summary>
+              <div role="group" aria-label="Select a country or region" className="flex flex-wrap gap-1.5 pt-3">
+                {regionButtons.map((r) => (
+                  <button key={r.id} type="button" aria-pressed={r.id === region} onClick={() => { selectRegion(r.id); scrollToMap(); }}
+                    className={`rounded-full px-3 py-1.5 text-xs ${PRESS} ${r.id === region ? "" : "[@media(hover:hover)]:hover:bg-[#e9e6fc]"}`}
+                    style={r.id === region ? { background: INK, color: "#fff" } : { background: "#f3f2fd", color: INK }}>
+                    {L(r.label)}{r.transit && route.mode !== "air" ? <small className="ml-1 opacity-60">Transit</small> : null}
+                  </button>
+                ))}
+              </div>
+            </details>
+            {route.mode === "air" && (
+              <div className="flex items-center gap-3 px-4 py-2.5" style={{ background: INK, ...chamfer(12, "br") }}>
+                <span style={{ color: LIME }}><IconPlane className="h-5 w-5" /></span>
+                <div><strong className="wf-sub block text-[10px]" style={{ color: "#fff" }}>Worldwide coverage</strong><span className="text-xs" style={{ color: "#c9c5ff" }}>To and from Georgia</span></div>
+              </div>
+            )}
+          </div>
+        </section>
       </div>
 
-      {/* ===== full-bleed map; on desktop the console floats over its right side, controls over the bottom-left ===== */}
-      <div className="relative mt-10">
-        {expanded && <div className="fixed inset-0 z-[65] bg-ink-950/40 backdrop-blur-[2px]" onClick={() => setExpanded(false)} aria-hidden="true" />}
-        <div ref={worldRef} data-mode={route.mode} className={`relative overflow-hidden ${expanded ? `fixed inset-3 z-[70] md:inset-8 ${SURFACE}` : "h-[64vh] min-h-[460px] lg:h-[82vh] lg:min-h-[720px] lg:max-h-[940px]"}`} style={{ background: "#f8f7ff", ...(expanded ? chamfer(28, "tr") : {}) }}>
-          <div ref={mapBoxRef} className="absolute inset-0" style={expanded ? undefined : {
-            // land fades into the section background at every edge, so the map has no visible frame
+      {/* ===== 2. map: see ===== */}
+      <div className="relative -mt-6">
+        <div ref={worldRef} data-mode={route.mode} className={`relative overflow-hidden ${expanded ? `fixed inset-3 z-[70] md:inset-8 ${SURFACE}` : "h-[62vh] min-h-[440px] lg:h-[74vh] lg:min-h-[620px] lg:max-h-[860px]"}`} style={{ background: "#f8f7ff" }}>
+          <div ref={mapBoxRef} className="absolute inset-0" style={{
             maskImage: "linear-gradient(to bottom, transparent 0, #000 14%, #000 86%, transparent 100%), linear-gradient(to right, transparent 0, #000 10%, #000 90%, transparent 100%)",
             WebkitMaskImage: "linear-gradient(to bottom, transparent 0, #000 14%, #000 86%, transparent 100%), linear-gradient(to right, transparent 0, #000 10%, #000 90%, transparent 100%)",
             maskComposite: "intersect",
@@ -592,11 +741,14 @@ export default function Routes() {
                   })}
                 </svg>
           </div>
-          {view === "world" && <p className="wf-sub pointer-events-none absolute left-0 right-0 top-20 text-center text-[9px] font-bold lg:right-[476px]" style={{ color: "#686879" }}>Select a country to explore routes</p>}
-          {/* mobile: preview chip stays on the map */}
-          <div className="absolute inset-x-3 bottom-3 z-10 lg:hidden">
-            <div className="relative">
-              {/* route preview: floating chip with leg progress */}
+          {/* route title on the map */}
+          <div className="pointer-events-none absolute left-0 right-0 top-[14%] z-10 mx-auto max-w-6xl px-6 md:px-10">
+            <p className={LABEL} style={{ color: PURPLE }}>Explore your route</p>
+            <h3 id="route-title" className="mt-2 text-[26px] leading-tight md:text-[34px]" style={{ color: INK, fontFamily: '"Loos Wide", Inter, sans-serif', fontWeight: 500, letterSpacing: "-0.02em" }}>{A(L(route.title))}</h3>
+          </div>
+          {/* preview + consolidation stops, bottom */}
+          <div ref={dockRef} className="absolute inset-x-0 bottom-[8%] z-10 mx-auto flex max-w-6xl flex-wrap items-end justify-between gap-3 px-4 md:px-10">
+            <div className="w-full sm:w-[420px]">
               <div className="relative flex items-center gap-3 bg-white/90 px-4 py-3 backdrop-blur" style={chamfer(14, "br")}>
                 <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center" style={{ background: INK, color: LIME }}>{modeIcon(leg.mode, "h-5 w-5")}</span>
                 <div className="min-w-0 flex-1">
@@ -607,48 +759,7 @@ export default function Routes() {
                 <span aria-hidden="true" className="absolute inset-x-0 bottom-0 h-[2px] origin-left transition-transform duration-300 ease-out" style={{ background: PURPLE, transform: `scaleX(${pct / 100})` }} />
               </div>
             </div>
-          </div>
-        </div>
-
-        {/* dock: preview + modes + consolidation (floats bottom-left on desktop, stacks below the map on mobile) */}
-        <div ref={dockRef} className="relative z-10 mt-3 space-y-3 px-4 lg:absolute lg:bottom-6 lg:left-6 lg:mt-0 lg:w-[min(560px,calc(100%-476px-72px))] lg:px-0">
-          <div className="relative hidden lg:block">
-            {/* route preview: floating chip with leg progress */}
-              <div className="relative flex items-center gap-3 bg-white/90 px-4 py-3 backdrop-blur" style={chamfer(14, "br")}>
-                <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center" style={{ background: INK, color: LIME }}>{modeIcon(leg.mode, "h-5 w-5")}</span>
-                <div className="min-w-0 flex-1">
-                  <p className={LABEL} style={{ color: "#686879" }}>Route preview</p>
-                  <strong data-leg-name className="mt-0.5 block truncate text-sm font-semibold" style={{ color: INK }}>{first(leg.from)} — {first(leg.to)}</strong>
-                </div>
-                <span className="text-xs tabular-nums" style={{ color: "#4b4b66" }}><b style={{ color: INK }}>{String(legIndex + 1).padStart(2, "0")}</b> / {String(route.legs.length).padStart(2, "0")}</span>
-                <span aria-hidden="true" className="absolute inset-x-0 bottom-0 h-[2px] origin-left transition-transform duration-300 ease-out" style={{ background: PURPLE, transform: `scaleX(${pct / 100})` }} />
-              </div>
-          </div>
-          {/* transport modes: one bar */}
-            <div className={`flex items-stretch bg-white p-1 ${SURFACE}`} style={chamfer(14, "br")}>
-              <div className="grid flex-1 grid-cols-4 gap-1">
-                {MODES.map((m) => {
-                  const on = route.mode === m.key;
-                  return (
-                    <button key={m.key} type="button" aria-pressed={on} aria-label={`${m.label} · ${m.sub}`} onClick={() => selectMode(m.key)}
-                      className={`relative flex min-h-[56px] items-center justify-center gap-2.5 px-2 text-left sm:justify-start sm:px-3 ${PRESS} ${on ? "" : "[@media(hover:hover)]:hover:bg-[#f3f2fd]"}`}
-                      style={on ? { background: INK, color: "#fff" } : { color: INK }}>
-                      <span style={{ color: on ? LIME : PURPLE }}><m.Icon className="h-5 w-5 shrink-0" /></span>
-                      <span className="hidden min-w-0 sm:block">
-                        <span className="block text-xs font-semibold">{m.label}</span>
-                        <small className="block truncate text-[10px] leading-tight opacity-70">{m.sub}</small>
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-              <span className="mx-1 w-px self-stretch" style={{ background: "#ecebf8" }} />
-              <button type="button" aria-pressed={playing} aria-label={motionLabel} onClick={() => setPaused((p) => !p)}
-                className={`inline-flex w-12 items-center justify-center ${PRESS} [@media(hover:hover)]:hover:bg-[#f3f2fd]`} style={{ color: PURPLE }}>
-                {playing ? I.pause : I.play}
-              </button>
-            </div>
-          {warehouses.length > 0 && (
+            {warehouses.length > 0 && (
               <div className="flex flex-wrap items-center gap-3 px-1">
                 <span className={LABEL} style={{ color: "#686879" }}>Consolidation stops</span>
                 {warehouses.map(({ s, i }) => (
@@ -659,143 +770,19 @@ export default function Routes() {
                 ))}
               </div>
             )}
+          </div>
         </div>
+      </div>
 
-        {/* console: floating panel on desktop (own scroll), regular block on mobile */}
-        <section ref={panelRef} id="route-explorer" aria-labelledby="route-title"
-          className={`relative z-10 mx-4 mt-4 bg-white p-6 md:p-8 lg:absolute lg:bottom-6 lg:right-6 lg:top-6 lg:mx-0 lg:mt-0 lg:w-[440px] lg:overflow-y-auto lg:overscroll-contain lg:bg-white/95 lg:backdrop-blur-md ${SURFACE}`}
-          style={chamfer(28, "tr")}>
-            <p className={LABEL} style={{ color: PURPLE }}>Explore your route</p>
-            <h3 id="route-title" className="mt-3 text-[28px] leading-tight md:text-[34px]" style={{ color: INK, fontFamily: '"Loos Wide", Inter, sans-serif', fontWeight: 500, letterSpacing: "-0.02em" }}>{A(L(route.title))}</h3>
-
-            <div ref={searchRef} className="relative mt-7">
-              <label htmlFor="route-country-search" className={LABEL} style={{ color: "#686879" }}>{route.options.direction === "export" ? "Where are we delivering?" : "Where are we starting?"}</label>
-              <div className="relative mt-2.5 flex items-center gap-3 bg-[#f3f2fd] px-4 ring-1 ring-inset ring-transparent transition-[box-shadow,background-color] duration-150 focus-within:bg-white focus-within:ring-brand-500" style={{ color: "#686879" }}>
-                {I.search}
-                <input id="route-country-search" ref={inputRef} type="search" autoComplete="off" role="combobox" aria-autocomplete="list" aria-expanded={listOpen} aria-controls="route-country-results"
-                  aria-activedescendant={listOpen && active >= 0 ? `country-result-${active}` : undefined} placeholder="Search a country…" value={query}
-                  onChange={(e) => { setQuery(e.target.value); setListOpen(true); setActive(-1); }}
-                  onFocus={(e) => { e.target.select(); setListOpen(true); setActive(-1); }}
-                  onKeyDown={(e) => {
-                    if (e.key === "Escape") { setListOpen(false); setActive(-1); return; }
-                    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
-                      e.preventDefault();
-                      setListOpen(true);
-                      if (!filtered.length) return;
-                      const next = (active + (e.key === "ArrowDown" ? 1 : -1) + filtered.length) % filtered.length;
-                      setActive(next);
-                      requestAnimationFrame(() => document.getElementById(`country-result-${next}`)?.scrollIntoView({ block: "nearest" }));
-                    }
-                    if (e.key === "Enter" && filtered.length) { e.preventDefault(); chooseCountry(filtered[Math.max(0, active)].id); }
-                  }}
-                  className="min-h-12 w-full bg-transparent text-sm outline-none placeholder:text-[#9a99b3] [&::-webkit-search-cancel-button]:hidden" style={{ color: INK }} />
-                <button type="button" aria-label="Clear search" onClick={() => { setQuery(""); inputRef.current?.focus(); setListOpen(true); setActive(-1); }} className={`inline-flex h-7 w-7 items-center justify-center ${PRESS} ${query ? "opacity-100" : "pointer-events-none opacity-0"}`} style={{ color: PURPLE }}>{I.close}</button>
-              </div>
-              <div id="route-country-results" role="listbox" hidden={!listOpen}
-                className="absolute inset-x-0 top-full z-20 mt-2 max-h-72 origin-top overflow-auto bg-white py-1 shadow-[0_24px_48px_-16px_rgba(4,4,43,0.28)] ring-1 ring-[#ecebf8] transition-[opacity,transform] duration-150 ease-out [@starting-style]:scale-[0.98] [@starting-style]:opacity-0">
-                {filtered.length ? filtered.map((c, i) => (
-                  <button key={c.id} id={`country-result-${i}`} type="button" role="option" aria-selected={i === active} onClick={() => chooseCountry(c.id)}
-                    className="group flex w-full items-center justify-between gap-3 px-4 py-2.5 text-left text-sm [@media(hover:hover)]:hover:bg-[#f3f2fd]" style={{ color: INK, background: i === active ? "#f1efff" : undefined }}>
-                    <span className="flex items-center gap-3"><span aria-hidden="true" className="text-base">{engine.flag(c.id)}</span>{L(c.label)}</span>
-                    <span className="opacity-40 transition-opacity duration-150 group-hover:opacity-100" style={{ color: PURPLE }}>{I.arrowUR}</span>
-                  </button>
-                )) : <p className="px-4 py-3 text-sm" style={{ color: "#686879" }}>No matching country</p>}
-              </div>
-              <p data-caption className="mt-2.5 text-xs leading-5" style={{ color: "#686879" }}>{A(caption)}</p>
-            </div>
-
-            {route.mode === "air" && (
-              <div className="mt-5 flex items-center gap-3 px-4 py-3" style={{ background: INK, ...chamfer(12, "br") }}>
-                <span style={{ color: LIME }}><IconPlane className="h-5 w-5" /></span>
-                <div><strong className="wf-sub block text-[10px]" style={{ color: "#fff" }}>Worldwide coverage</strong><span className="text-xs" style={{ color: "#c9c5ff" }}>To and from Georgia</span></div>
-              </div>
-            )}
-
-            <details className="group/regions mt-6 border-y" style={{ borderColor: "#ecebf8" }}>
-              <summary className="flex cursor-pointer list-none items-center justify-between py-4 [&::-webkit-details-marker]:hidden">
-                <span className={LABEL} style={{ color: INK }}>Browse regions & corridors</span>
-                <span className="transition-transform duration-200 ease-out group-open/regions:rotate-180" style={{ color: PURPLE }}>{I.caret}</span>
-              </summary>
-              <div role="group" aria-label="Select a country or region" className="flex flex-wrap gap-1.5 pb-5">
-                {regionButtons.map((r) => (
-                  <button key={r.id} type="button" aria-pressed={r.id === region} onClick={() => { selectRegion(r.id); scrollToMap(); }}
-                    className={`rounded-full px-3 py-1.5 text-xs ${PRESS} ${r.id === region ? "" : "[@media(hover:hover)]:hover:bg-[#e9e6fc]"}`}
-                    style={r.id === region ? { background: INK, color: "#fff" } : { background: "#f3f2fd", color: INK }}>
-                    {L(r.label)}{r.transit && route.mode !== "air" ? <small className="ml-1 opacity-60">Transit</small> : null}
-                  </button>
-                ))}
-              </div>
-            </details>
-
-            <label className="mt-6 block">
-              <span className={LABEL} style={{ color: "#686879" }}>Choose a corridor</span>
-              <span className="relative mt-2.5 block">
-                <select id="route-family" value={route.id} onChange={(e) => selectRoute(e.target.value)} className={`${FIELD} pr-10 font-semibold`} style={{ color: INK }}>
-                  {engine.families.filter((f) => f.mode === route.mode).map((f) => <option key={f.id} value={f.id}>{L(f.label)}</option>)}
-                </select>
-                <Caret />
-              </span>
-            </label>
-
-            {segFields.length > 0 && (
-              <div className="mt-6 flex flex-wrap gap-x-5 gap-y-5">
-                {segFields.map((f) => (
-                  <fieldset key={f.key} className="min-w-0">
-                    <legend className={LABEL} style={{ color: "#686879" }}>{L(f.label)}</legend>
-                    <div role="group" aria-label={L(f.label)} className="mt-2.5 inline-flex flex-wrap gap-1 bg-[#f3f2fd] p-1">
-                      {f.options.map((o) => {
-                        const on = route.options[f.key] === o.id;
-                        return (
-                          <button key={o.id} type="button" aria-pressed={on} onClick={() => setOption(f.key, o.id)}
-                            className={`px-4 py-2.5 text-xs ${PRESS}`}
-                            style={f.key === "load" && on ? { background: LIME, color: INK, boxShadow: "0 1px 2px rgba(4,4,43,0.12)" } : on ? { background: INK, color: "#fff" } : { color: "#4b4b66" }}>
-                            <strong className={on ? "font-semibold" : "font-normal"}>{A(L(o.label))}</strong>{o.description && <small className="block">{A(L(o.description))}</small>}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </fieldset>
-                ))}
-              </div>
-            )}
-            {selectFields.map((f) => (
-              <label key={f.key} className="mt-6 block">
-                <span className={LABEL} style={{ color: "#686879" }}>{L(f.label)}</span>
-                <span className="relative mt-2.5 block max-w-xs">
-                  <select data-route-field={f.key} aria-label={L(f.label)} value={route.options[f.key]} onChange={(e) => setOption(f.key, e.target.value)} className={`${FIELD} pr-10`} style={{ color: INK }}>
-                    {f.options.map((o) => <option key={o.id} value={o.id}>{L(o.label)}</option>)}
-                  </select>
-                  <Caret />
-                </span>
-              </label>
-            ))}
-            {cardFields.map((f) => (
-              <fieldset key={f.key} className="mt-6">
-                <legend className={LABEL} style={{ color: "#686879" }}>{L(f.label)}</legend>
-                <div role="group" aria-label={L(f.label)} className="mt-2.5 grid gap-2 sm:grid-cols-3">
-                  {f.options.map((o, i) => {
-                    const on = route.options[f.key] === o.id;
-                    return (
-                      <button key={o.id} type="button" aria-pressed={on} onClick={() => setOption(f.key, o.id)}
-                        className={`relative flex flex-col p-4 text-left ${PRESS} ${on ? "" : "[@media(hover:hover)]:hover:bg-[#ecebfc]"}`}
-                        style={on ? { background: "#fff", boxShadow: `inset 0 0 0 2px ${PURPLE}` } : { background: "#f3f2fd" }}>
-                        <span className="wf-sub text-[10px] font-bold tabular-nums" style={{ color: on ? PURPLE : "#a3a2bd" }}>{String(i + 1).padStart(2, "0")}</span>
-                        <strong className="mt-2 block pr-5 text-[13px] font-semibold leading-snug" style={{ color: INK }}>{A(L(o.label))}</strong>
-                        {o.description && <small className="mt-1.5 block text-[11px] leading-5" style={{ color: "#686879" }}>{A(L(o.description))}</small>}
-                        <span className={`absolute right-3 top-3 transition-[opacity,transform] duration-200 ease-out ${on ? "scale-100 opacity-100" : "scale-90 opacity-0"}`} style={{ color: PURPLE }}>{I.check}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </fieldset>
-            ))}
-
-            <div className="mt-6 flex items-start gap-3 p-4" style={{ background: "#f8f7ff" }}>
+      {/* ===== 3. what happens: details, stages, progress ===== */}
+      <div className="mx-auto mt-2 max-w-6xl px-6 md:px-10">
+        <div className={`bg-white p-5 md:p-6 ${SURFACE}`} style={chamfer(24, "br")}>
+          <div className="flex items-start gap-3">
               {route.load && <span className="wf-sub shrink-0 px-2 py-1 text-[10px] font-bold" style={{ background: LIME, color: INK }}>{route.mode === "rail" ? "Rail " : ""}{route.load}</span>}
               <p data-details className="text-xs leading-5" style={{ color: "#4b4b66" }}>{A(L(route.details))}</p>
             </div>
-
-            <details className="group/stages mt-6 border-t" style={{ borderColor: "#ecebf8" }}>
+          <div className="mt-5 border-t pt-4" style={{ borderColor: "#ecebf8" }}>
+            <details className="group/stages" open>
               <summary className="flex cursor-pointer list-none items-center justify-between py-4 [&::-webkit-details-marker]:hidden">
                 <span className={LABEL} style={{ color: INK }}>Route stages · {route.stops.length}</span>
                 <span className="transition-transform duration-200 ease-out group-open/stages:rotate-180" style={{ color: PURPLE }}>{I.caret}</span>
@@ -826,15 +813,15 @@ export default function Routes() {
                 })}
               </ol>
             </details>
-
-            <div className="mt-3 flex items-center gap-4">
+          </div>
+          <div className="mt-4 flex items-center gap-4">
               <input id="route-progress" ref={progressRef} type="range" min={0} max={100} step={0.1} defaultValue={0} aria-label="Preview progress"
                 onInput={(e) => { setPaused(true); elapsed.current = Math.min(total - 0.001, (total * Number((e.target as HTMLInputElement).value)) / 100); draw(); }}
                 className="wf-range h-1 w-full cursor-pointer appearance-none bg-[#ecebf8] accent-brand-500" />
               <output ref={outputRef} htmlFor="route-progress" className="w-10 text-right text-xs tabular-nums" style={{ color: "#4b4b66" }}>0%</output>
             </div>
-            <p id="route-note" className="mt-6 text-[11px] leading-5" style={{ color: "#8a89a3" }}>{COPY.note}{route.mode === "air" ? " " + COPY.airNote : ""}</p>
-          </section>
+          <p id="route-note" className="mt-6 text-[11px] leading-5" style={{ color: "#8a89a3" }}>{COPY.note}{route.mode === "air" ? " " + COPY.airNote : ""}</p>
+        </div>
       </div>
     </section>
   );
