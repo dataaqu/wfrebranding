@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef } from "react";
-import { motion, useMotionValue, useReducedMotion, useScroll, useTransform, type MotionValue } from "motion/react";
+import { cubicBezier, motion, useMotionValue, useReducedMotion, useScroll, useTransform, type MotionValue } from "motion/react";
 
 import { chamfer, WMark, Wordmark } from "@/components/brand/design-system";
 
@@ -22,14 +22,16 @@ const SOCIAL: { name: string; href: string; d: string }[] = [
   { name: "LinkedIn", href: "https://www.linkedin.com/company/weforward/", d: "M6.9 8.9H3.8V20h3.1V8.9ZM5.35 4a1.8 1.8 0 1 0 0 3.6 1.8 1.8 0 0 0 0-3.6ZM20.2 13.6c0-3-.65-5-4.1-5-1.66 0-2.77.9-3.22 1.77h-.05V8.9H9.9V20H13v-5.5c0-1.45.27-2.85 2.07-2.85 1.77 0 1.8 1.66 1.8 2.94V20h3.1l.23-6.4Z" },
 ];
 
-/** Fast eased scroll to the top (≈0.4-0.75s by distance), easeInOutCubic,
+/** Fast scroll to the top with a slow landing (≈0.6-1.15s by distance),
  *  cancelled as soon as the visitor scrolls, touches or presses a key. */
 function scrollToTop() {
   const start = window.scrollY;
   if (start <= 0) return;
   if (matchMedia("(prefers-reduced-motion: reduce)").matches) { window.scrollTo(0, 0); return; }
-  const duration = Math.min(750, Math.max(380, start * 0.05)); // fast flick: the page flashes past and lands on the hero
-  const ease = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+  const duration = Math.min(1050, Math.max(550, start * 0.08));
+  // fast flick, then a long soft landing: short ease-in, ~90% of the distance by mid-time, the last
+  // stretch eases out slowly so the arrival on the hero reads as a brief pause (cubic-bezier .35,0,.05,1)
+  const ease = cubicBezier(0.35, 0, 0.05, 1);
   const html = document.documentElement, prev = html.style.scrollBehavior;
   html.style.scrollBehavior = "auto";
   let raf = 0, t0 = 0;
