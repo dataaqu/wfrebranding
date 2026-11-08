@@ -7,7 +7,7 @@ import * as THREE from "three";
 /* Scroll-driven WebGL globe for the Facts scene (Emons-style).
    `progress` is the pinned section's scroll progress 0..1:
      0.00–0.70  globe rises from below the panel and shrinks into a full sphere, rotating east
-     0.40–0.75  locations, routes into Tbilisi and orbit rings fade in
+     0.40–0.75  locations and routes into Tbilisi fade in
    Texture: NASA Blue Marble + clouds (public domain), recoloured to brand duotone → /assets/earth-brand.jpg */
 
 const R = 1;
@@ -132,15 +132,6 @@ export default function FactsGlobe({ progress, reduce }: { progress: MotionValue
       spin.add(dashedTube(arc(toVec(lat, lon), tbV, 0.32, 96), 0.0032, 0.026, 0.016, routeMat));
     });
 
-    // tilted dashed orbit rings around the globe (not spinning with the earth)
-    const orbitMat = new THREE.MeshBasicMaterial({ color: 0x8373f5, transparent: true, opacity: 0 });
-    [[1.28, 0.95, 0.35], [1.42, 1.25, -0.5]].forEach(([r, tx, tz]) => {
-      const pts = new THREE.EllipseCurve(0, 0, r, r, 0, Math.PI * 2).getPoints(240).map((p) => new THREE.Vector3(p.x, 0, p.y));
-      const ring = dashedTube(pts, 0.0022, 0.045, 0.032, orbitMat);
-      ring.rotation.set(tx, 0, tz);
-      globe.add(ring);
-    });
-
     let w = 0, h = 0, needsRender = true, visible = true, raf = 0;
     const resize = () => {
       w = host.clientWidth; h = host.clientHeight;
@@ -184,14 +175,13 @@ export default function FactsGlobe({ progress, reduce }: { progress: MotionValue
       globe.position.y = lerp(yStartPx, yEndPx, k) * worldPerPx;
 
       globe.rotation.x = 0.42; // show the northern hemisphere
-      spin.rotation.y = lerp(startRot, endRot, k) + (reduce ? 0 : tSec * 0.02);
+      spin.rotation.y = lerp(startRot, endRot, k) + (reduce ? 0 : Math.sin(tSec * 0.25) * 0.12); // gentle sway, never drifts away from Tbilisi
 
       const f = easeOut(range(p, 0.4, 0.75));
       purple.opacity = f;
       lime.opacity = f;
       ringMat.opacity = f;
       routeMat.opacity = f;
-      orbitMat.opacity = f * 0.7;
       const pp = (tSec % 2) / 2;
       pulse.scale.setScalar(1 + pp * 1.8);
       pulseMat.opacity = reduce ? 0 : f * (1 - pp) * 0.9;
