@@ -50,7 +50,8 @@ function Video({ name, active, eager, load }: { name: string; active: boolean; e
   useEffect(() => {
     const v = ref.current;
     if (!v || !load) return;
-    if (active) void v.play().catch(() => {});
+    // each time a service becomes active its clip restarts, so the photo → wireframe story plays from the top
+    if (active) { v.currentTime = 0; void v.play().catch(() => {}); }
     else v.pause();
   }, [active, load]);
   // nothing is fetched (not even the poster) until the section is near the viewport
