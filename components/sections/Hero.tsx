@@ -304,8 +304,9 @@ export default function Hero() {
           <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-5 py-4 md:gap-6 md:px-10">
             <a href="#main" aria-label="WEFORWARD home"><LogoHorizontal size="sm" wordColor="#ffffff" /></a>
             <nav aria-label="Main" className="hidden items-center gap-7 lg:flex">
-              {[["Services", "#services"], ["Rail from China", "#rail"], ["Customs", "#brokerage"], ["How it works", "#routes"], ["Contact", "#quote"]].map(([t, h]) => (
-                <a key={h} href={h} className="wf-sub whitespace-nowrap text-xs font-bold transition-colors hover:text-volt-500" style={{ color: "#ffffff" }}>{t}</a>
+              {/* labels only for now — links get wired once the target pages/sections are decided */}
+              {["About us", "Services", "Track your cargo", "News", "Contact"].map((t) => (
+                <span key={t} className="wf-sub cursor-default whitespace-nowrap text-xs font-bold" style={{ color: "#ffffff" }}>{t}</span>
               ))}
             </nav>
             <div className="flex items-center gap-3 md:gap-5">
