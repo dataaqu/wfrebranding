@@ -161,8 +161,8 @@ export default function FactsGlobe({ progress, reduce }: { progress: MotionValue
       if (!needsRender && reduce) return;
 
       // fit: radius in screen ~ 0.36 of min(w,h) at the end, ~1.1 of width at the start
-      const rise = easeOut(range(p, 0.22, 0.45)); // comes up from below the panel to the wordmark
-      const k = easeOut(range(p, 0.45, 0.85)); // then rotates and shrinks into a full sphere
+      const rise = easeOut(range(p, 0.0, 0.3)); // comes up from below the panel to the wordmark
+      const k = easeOut(range(p, 0.3, 0.8)); // then rotates and shrinks into a full sphere
       const fitEnd = 0.29 * Math.min(w, h * 1.15);
       const fitStart = Math.min((w < 768 ? 0.55 : 0.32) * w, 0.7 * h); // Emons-like start: moderate globe under the figures
       const pxRadius = lerp(fitStart, fitEnd, k);
@@ -182,7 +182,7 @@ export default function FactsGlobe({ progress, reduce }: { progress: MotionValue
       globe.rotation.x = 0.42; // show the northern hemisphere
       spin.rotation.y = lerp(startRot, endRot, k) + (reduce ? 0 : Math.sin(tSec * 0.25) * 0.12); // gentle sway, never drifts away from Tbilisi
 
-      const f = easeOut(range(p, 0.78, 0.95));
+      const f = easeOut(range(p, 0.75, 0.95));
       purple.opacity = f;
       lime.opacity = f;
       ringMat.opacity = f;
