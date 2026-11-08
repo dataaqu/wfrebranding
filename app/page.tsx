@@ -3,6 +3,7 @@ import Hero from "@/components/sections/Hero";
 import Facts from "@/components/sections/Facts";
 import Services from "@/components/sections/Services";
 import Tracking from "@/components/sections/Tracking";
+import Network from "@/components/sections/Network";
 import Routes from "@/components/sections/Routes";
 import Rail from "@/components/sections/Rail";
 import Brokerage from "@/components/sections/Brokerage";
@@ -16,6 +17,7 @@ export default function Page() {
     <Facts />
     <Routes />
     <Services />
+    <Network />
     <Tracking />
     <Rail />
     <Brokerage />
