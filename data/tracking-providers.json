@@ -1,0 +1,422 @@
+[
+ {
+  "id": "maersk",
+  "name": "Maersk",
+  "category": "sea",
+  "url": "https://www.maersk.com/tracking/",
+  "referenceTypes": [
+   "container",
+   "bill_of_lading"
+  ],
+  "prefill": {
+   "container": "https://www.maersk.com/tracking/{reference}",
+   "bill_of_lading": "https://www.maersk.com/tracking/{reference}"
+  }
+ },
+ {
+  "id": "msc",
+  "name": "MSC",
+  "category": "sea",
+  "url": "https://www.msc.com/en/track-a-shipment",
+  "referenceTypes": [
+   "container",
+   "bill_of_lading",
+   "booking"
+  ],
+  "prefill": null
+ },
+ {
+  "id": "cma-cgm",
+  "name": "CMA CGM",
+  "category": "sea",
+  "url": "https://www.cma-cgm.com/ebusiness/tracking",
+  "referenceTypes": [
+   "container",
+   "bill_of_lading"
+  ],
+  "prefill": null
+ },
+ {
+  "id": "hapag-lloyd",
+  "name": "Hapag-Lloyd",
+  "category": "sea",
+  "url": "https://www.hapag-lloyd.com/solutions/tracking/",
+  "referenceTypes": [
+   "container",
+   "bill_of_lading",
+   "booking"
+  ],
+  "prefill": null
+ },
+ {
+  "id": "cosco",
+  "name": "COSCO SHIPPING Lines",
+  "category": "sea",
+  "url": "https://elines.coscoshipping.com/scct/public/ct/base?lang=en",
+  "referenceTypes": [
+   "container",
+   "bill_of_lading",
+   "booking"
+  ],
+  "prefill": null
+ },
+ {
+  "id": "evergreen",
+  "name": "Evergreen / ShipmentLink",
+  "category": "sea",
+  "url": "https://ct.shipmentlink.com/servlet/TDB1_CargoTracking.do",
+  "referenceTypes": [
+   "container",
+   "bill_of_lading",
+   "booking"
+  ],
+  "prefill": null
+ },
+ {
+  "id": "one",
+  "name": "ONE",
+  "category": "sea",
+  "url": "https://www.one-line.com/one-ecom/manage-shipment/cargo-tracking?sessLocale=en-ONE",
+  "referenceTypes": [
+   "bill_of_lading",
+   "booking"
+  ],
+  "prefill": {
+   "bill_of_lading": "https://ecomm.one-line.com/one-ecom/manage-shipment/cargo-tracking?trakNoParam={reference}&ctrack-field={reference}",
+   "booking": "https://ecomm.one-line.com/one-ecom/manage-shipment/cargo-tracking?trakNoParam={reference}&ctrack-field={reference}"
+  }
+ },
+ {
+  "id": "hmm",
+  "name": "HMM",
+  "category": "sea",
+  "url": "https://www.hmm21.com/e-service/general/trackNTrace/TrackNTrace.do",
+  "referenceTypes": [
+   "container",
+   "bill_of_lading",
+   "booking",
+   "purchase_order"
+  ],
+  "prefill": null
+ },
+ {
+  "id": "zim",
+  "name": "ZIM",
+  "category": "sea",
+  "url": "https://www.zim.com/tools/track-a-shipment",
+  "referenceTypes": [
+   "container",
+   "bill_of_lading",
+   "booking"
+  ],
+  "prefill": null
+ },
+ {
+  "id": "yang-ming",
+  "name": "Yang Ming",
+  "category": "sea",
+  "url": "https://www.yangming.com/en/esolution/tracking/cargo_tracking",
+  "referenceTypes": [
+   "container",
+   "bill_of_lading",
+   "booking"
+  ],
+  "prefill": null
+ },
+ {
+  "id": "oocl",
+  "name": "OOCL",
+  "category": "sea",
+  "url": "https://www.oocl.com/eng/ourservices/eservices/cargotracking/pages/cargotracking.aspx",
+  "referenceTypes": [
+   "container",
+   "bill_of_lading",
+   "booking"
+  ],
+  "prefill": null
+ },
+ {
+  "id": "pil",
+  "name": "PIL",
+  "category": "sea",
+  "url": "https://www.pilship.com/digital-solutions/?tab=customer&id=track-trace&label=containerTandT",
+  "referenceTypes": [
+   "container",
+   "bill_of_lading",
+   "booking",
+   "purchase_order"
+  ],
+  "prefill": {
+   "container": "https://www.pilship.com/digital-solutions/?tab=customer&id=track-trace&label=containerTandT&module=TrackContStatus&refNo={reference}",
+   "bill_of_lading": "https://www.pilship.com/digital-solutions/?tab=customer&id=track-trace&label=containerTandT&module=TrackTraceBL&refNo={reference}",
+   "booking": "https://www.pilship.com/digital-solutions/?tab=customer&id=track-trace&label=containerTandT&module=TrackTraceJob&refNo={reference}",
+   "purchase_order": "https://www.pilship.com/digital-solutions/?tab=customer&id=track-trace&label=containerTandT&module=TrackTracePO&refNo={reference}"
+  }
+ },
+ {
+  "id": "arkas",
+  "name": "Arkas Line",
+  "category": "sea",
+  "url": "https://arkasline.com.tr/en/online-tracking/",
+  "referenceTypes": [],
+  "prefill": null
+ },
+ {
+  "id": "dfds",
+  "name": "DFDS",
+  "category": "sea",
+  "url": "https://www.dfds.com/en/freight-ferries-and-logistics/book-and-track",
+  "referenceTypes": [
+   "booking"
+  ],
+  "prefill": null
+ },
+ {
+  "id": "qatar",
+  "name": "Qatar Airways Cargo",
+  "category": "air",
+  "url": "https://www.qrcargo.com/s/track-your-shipment",
+  "referenceTypes": [
+   "awb"
+  ],
+  "prefill": null,
+  "awbPrefixes": [
+   "157"
+  ]
+ },
+ {
+  "id": "emirates",
+  "name": "Emirates SkyCargo",
+  "category": "air",
+  "url": "https://eskycargo.emirates.com/app/offerandorder/#/home/find-offer",
+  "referenceTypes": [
+   "awb"
+  ],
+  "prefill": null,
+  "awbPrefixes": [
+   "176"
+  ]
+ },
+ {
+  "id": "turkish",
+  "name": "Turkish Cargo",
+  "category": "air",
+  "url": "https://www.turkishcargo.com/en/cargo-tracking",
+  "referenceTypes": [
+   "awb"
+  ],
+  "prefill": null,
+  "awbPrefixes": [
+   "235"
+  ]
+ },
+ {
+  "id": "lufthansa",
+  "name": "Lufthansa Cargo",
+  "category": "air",
+  "url": "https://www.lufthansa-cargo.com/en/eservices/tracking",
+  "referenceTypes": [
+   "awb"
+  ],
+  "prefill": null,
+  "awbPrefixes": [
+   "020"
+  ]
+ },
+ {
+  "id": "cargolux",
+  "name": "Cargolux",
+  "category": "air",
+  "url": "https://www.cargolux.com/track-and-trace/",
+  "referenceTypes": [
+   "awb"
+  ],
+  "prefill": null,
+  "awbPrefixes": [
+   "172",
+   "356"
+  ]
+ },
+ {
+  "id": "cathay",
+  "name": "Cathay Cargo",
+  "category": "air",
+  "url": "https://www.cathaycargo.com/en-us/track-and-trace.html",
+  "referenceTypes": [
+   "awb"
+  ],
+  "prefill": null,
+  "awbPrefixes": [
+   "160"
+  ]
+ },
+ {
+  "id": "korean",
+  "name": "Korean Air Cargo",
+  "category": "air",
+  "url": "https://cargo.koreanair.com/en/tracking",
+  "referenceTypes": [
+   "awb"
+  ],
+  "prefill": null,
+  "awbPrefixes": [
+   "180"
+  ]
+ },
+ {
+  "id": "etihad",
+  "name": "Etihad Cargo",
+  "category": "air",
+  "url": "https://www.etihadcargo.com/en/e-services/track-shipment",
+  "referenceTypes": [
+   "awb"
+  ],
+  "prefill": null,
+  "awbPrefixes": [
+   "607"
+  ]
+ },
+ {
+  "id": "afkl",
+  "name": "Air France KLM Martinair Cargo",
+  "category": "air",
+  "url": "https://www.afklcargo.com/mycargo/shipment/singlesearch",
+  "referenceTypes": [
+   "awb"
+  ],
+  "prefill": null,
+  "awbPrefixes": [
+   "057",
+   "074"
+  ]
+ },
+ {
+  "id": "iag",
+  "name": "IAG Cargo",
+  "category": "air",
+  "url": "https://www.iagcargo.com/en/home/",
+  "referenceTypes": [
+   "awb"
+  ],
+  "prefill": null,
+  "awbPrefixes": [
+   "125",
+   "075"
+  ]
+ },
+ {
+  "id": "silkway",
+  "name": "Silk Way West",
+  "category": "air",
+  "url": "https://www.silkwaywest.com/e-services/shipment-tracking/",
+  "referenceTypes": [
+   "awb"
+  ],
+  "prefill": null,
+  "awbPrefixes": [
+   "501"
+  ]
+ },
+ {
+  "id": "swiss",
+  "name": "SWISS WorldCargo",
+  "category": "air",
+  "url": "https://www.swissworldcargo.com/en/track_n_trace",
+  "referenceTypes": [
+   "awb"
+  ],
+  "prefill": null,
+  "awbPrefixes": [
+   "724"
+  ]
+ },
+ {
+  "id": "united",
+  "name": "United Cargo",
+  "category": "air",
+  "url": "https://www.unitedcargo.com/en/us/track",
+  "referenceTypes": [
+   "awb",
+   "confirmation"
+  ],
+  "prefill": {
+   "awb": "https://www.unitedcargo.com/en/us/track/awb/{reference}"
+  },
+  "awbPrefixes": [
+   "016"
+  ]
+ },
+ {
+  "id": "ups-air",
+  "name": "UPS Air Cargo",
+  "category": "air",
+  "url": "https://aircargo.ups.com/en-us/tracking",
+  "referenceTypes": [
+   "awb"
+  ],
+  "prefill": null,
+  "awbPrefixes": [
+   "406"
+  ]
+ },
+ {
+  "id": "tracktrace-container",
+  "name": "Track-trace · Containers",
+  "category": "hub",
+  "url": "https://www.track-trace.com/container",
+  "referenceTypes": [
+   "container"
+  ],
+  "prefill": {
+   "container": "https://www.track-trace.com/container#{reference}"
+  }
+ },
+ {
+  "id": "tracktrace-awb",
+  "name": "Track-trace · Air cargo",
+  "category": "hub",
+  "url": "https://www.track-trace.com/aircargo",
+  "referenceTypes": [
+   "awb"
+  ],
+  "prefill": {
+   "awb": "https://www.track-trace.com/aircargo#{reference}"
+  }
+ },
+ {
+  "id": "tracktrace-bl",
+  "name": "Track-trace · Bill of lading",
+  "category": "hub",
+  "url": "https://www.track-trace.com/bol",
+  "referenceTypes": [
+   "bill_of_lading"
+  ],
+  "prefill": null
+ },
+ {
+  "id": "marinetraffic",
+  "name": "MarineTraffic",
+  "category": "vessel",
+  "url": "https://www.marinetraffic.com/",
+  "referenceTypes": [
+   "vessel_name",
+   "imo",
+   "mmsi"
+  ],
+  "prefill": null
+ },
+ {
+  "id": "flightradar24",
+  "name": "Flightradar24",
+  "category": "flight",
+  "url": "https://www.flightradar24.com/",
+  "referenceTypes": [
+   "flight_number",
+   "aircraft_registration"
+  ],
+  "prefill": {
+   "flight_number": "https://www.flightradar24.com/data/flights/{reference}",
+   "aircraft_registration": "https://www.flightradar24.com/data/aircraft/{reference}"
+  }
+ }
+]
