@@ -122,7 +122,7 @@ export default function Hero() {
                 onClick={() => setClosed(false)}
                 className="wf-sub inline-flex min-h-11 items-center gap-3 border border-white/25 bg-white/10 px-5 text-xs font-bold text-white backdrop-blur transition-colors hover:bg-white/20"
               >
-                <WMark className="h-5 w-5" /> Open tms.weforward
+                <WMark className="h-5 w-5" color="#ffffff" /> Open tms.weforward
               </button>
             </motion.div>
           ) : (
