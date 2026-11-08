@@ -14,11 +14,11 @@ const SERVICES = [
   { title: "Customs brokerage", text: "Expert customs clearance and trade compliance services to expedite your shipments.", media: "customs" },
 ];
 const EASE = [0.45, 0, 0.15, 1] as const;
-const NAVY = "#04042b", PURPLE = "#644ff2", MUTED = "#c9c8d6";
+const NAVY = "#04042b", GREEN = "#9fc31f", MUTED = "#c9c8d6";
 
 const LIME = "#d5f476";
 // Brand card band: flat top for ~58% of the width, then a short drop to the right edge.
-const BAND = "polygon(0 0, 58% 0, 100% 13%, 100% 100%, 0 100%)";
+const BAND = "polygon(0 0, 58% 0, 100% 24%, 100% 100%, 0 100%)";
 
 /** Brand card frame (as in the brand guidelines): white W mark, lime band carrying the uppercase title. */
 function CardChrome({ title, reduce }: { title: string; reduce: boolean }) {
@@ -26,10 +26,10 @@ function CardChrome({ title, reduce }: { title: string; reduce: boolean }) {
     <>
       <div aria-hidden="true" className="absolute inset-x-0 top-0 z-10 h-40 bg-[linear-gradient(to_bottom,rgba(4,4,43,0.35),rgba(4,4,43,0))]" />
       <WMark className="absolute right-7 top-7 z-10 h-12 w-auto md:h-14" color="#ffffff" />
-      <div className="absolute inset-x-0 -bottom-px z-10 h-[38%]" style={{ background: LIME, clipPath: BAND }}>
-        <div className="absolute inset-x-0 top-[16%] overflow-hidden px-7 pb-2 md:px-9">
+      <div className="absolute inset-x-0 -bottom-px z-10 h-[19%] min-h-[120px]" style={{ background: LIME, clipPath: BAND }}>
+        <div className="absolute inset-x-0 bottom-0 overflow-hidden px-7 pb-6 md:px-9 md:pb-7">
           <AnimatePresence mode="popLayout" initial={false}>
-            <motion.p key={title} aria-hidden="true" className="wf-head max-w-[11ch] text-[clamp(1.8rem,3.4vw,3.6rem)] leading-[0.95]" style={{ color: NAVY }}
+            <motion.p key={title} aria-hidden="true" className="wf-head text-[clamp(1.6rem,2.8vw,3rem)] leading-[0.95]" style={{ color: NAVY }}
               initial={reduce ? false : { y: "110%" }} animate={{ y: 0 }} exit={reduce ? undefined : { y: "-110%" }}
               transition={{ duration: 0.7, ease: EASE }}>
               {title}
@@ -58,9 +58,9 @@ function Video({ name, active, eager }: { name: string; active: boolean; eager: 
   );
 }
 
-// One word whose colour follows scroll: muted → purple (leading edge) → navy.
+// One word whose colour follows scroll: muted → brand green (leading edge) → navy.
 function Word({ children, progress, start, end }: { children: string; progress: MotionValue<number>; start: number; end: number }) {
-  const color = useTransform(progress, [start, end, Math.min(1, end + 0.25)], [MUTED, PURPLE, NAVY]);
+  const color = useTransform(progress, [start, end, Math.min(1, end + 0.12)], [MUTED, GREEN, NAVY]);
   return <motion.span style={{ color }}>{children} </motion.span>;
 }
 
