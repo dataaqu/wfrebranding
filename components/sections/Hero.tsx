@@ -20,25 +20,25 @@ export default function Hero() {
     });
   }, [reduce]);
   return (
-    <section id="hero" className="relative overflow-hidden" style={{ background: "#f8f7ff" }}>
-        {/* Light hero. The port video/photo is a band behind the product preview (lower part of the hero),
-            with a light navy scrim. Reduced motion: no autoplay, poster only. */}
-        <div aria-hidden="true" style={{ position: "absolute", top: "42%", left: 0, right: 0, bottom: 0, overflow: "hidden" }}>
+    <section id="hero" className="relative overflow-hidden" style={{ background: "#04042b" }}>
+        {/* Full-bleed hero: the port video covers the whole section behind header, headline and preview,
+            with a navy scrim for legibility. Reduced motion: no autoplay, poster only. */}
+        <div aria-hidden="true" style={{ position: "absolute", inset: 0, overflow: "hidden" }}>
           <div style={{ position: "absolute", inset: 0, backgroundImage: "url('/assets/hero-port.png')", backgroundSize: "cover", backgroundPosition: "center 55%" }} />
           <video ref={videoDesktop} className="hidden md:block" src="/assets/hero-720.webm" poster="/assets/hero-port.png" muted loop playsInline autoPlay={!reduce} preload="metadata"
             style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", objectFit: "cover" }} />
           <video ref={videoMobile} className="md:hidden" src="/assets/hero-540.webm" poster="/assets/hero-port.png" muted loop playsInline autoPlay={!reduce} preload="metadata"
             style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", objectFit: "cover" }} />
-          <div style={{ position: "absolute", inset: 0, background: "rgba(4, 4, 43, 0.25)" }} />
+          <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(4,4,43,0.72) 0%, rgba(4,4,43,0.5) 45%, rgba(4,4,43,0.3) 100%)" }} />
         </div>
 
         {/* header */}
         <header id="header" className="relative z-20">
-          <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-5 py-5 md:gap-6 md:px-10" style={{ borderBottom: "1px solid #e4e1ff" }}>
-            <a href="#main" aria-label="WEFORWARD home"><LogoHorizontal size="sm" wordColor="#04042b" /></a>
+          <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-5 py-5 md:gap-6 md:px-10" style={{ borderBottom: "1px solid rgba(255,255,255,0.15)" }}>
+            <a href="#main" aria-label="WEFORWARD home"><LogoHorizontal size="sm" wordColor="#ffffff" /></a>
             <nav aria-label="Main" className="hidden items-center gap-7 lg:flex">
               {[["Services", "#services"], ["Rail from China", "#rail"], ["Customs", "#brokerage"], ["How it works", "#how"], ["Contact", "#quote"]].map(([t, h]) => (
-                <a key={h} href={h} className="wf-sub whitespace-nowrap text-xs font-bold transition-colors hover:text-brand-500" style={{ color: "#04042b" }}>{t}</a>
+                <a key={h} href={h} className="wf-sub whitespace-nowrap text-xs font-bold transition-colors hover:text-volt-500" style={{ color: "#ffffff" }}>{t}</a>
               ))}
             </nav>
             <div className="flex items-center gap-3 md:gap-5">
@@ -47,8 +47,8 @@ export default function Hero() {
                 data-anim="lang-switch"
                 onClick={() => setLang(lang === "EN" ? "KA" : "EN")}
                 aria-label={`Language: ${lang === "EN" ? "English" : "Georgian"}. Switch to ${lang === "EN" ? "Georgian" : "English"}`}
-                className="wf-sub inline-flex min-h-11 items-center gap-2 whitespace-nowrap text-xs font-bold transition-colors hover:text-brand-500"
-                style={{ color: "#04042b" }}
+                className="wf-sub inline-flex min-h-11 items-center gap-2 whitespace-nowrap text-xs font-bold transition-colors hover:text-volt-500"
+                style={{ color: "#ffffff" }}
               >
                 <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M3 12h18M12 3c3 3.5 3 14.5 0 18M12 3c-3 3.5-3 14.5 0 18" /></svg>
                 {lang}
@@ -67,7 +67,7 @@ export default function Hero() {
                 <motion.div
                   data-anim={`hero-line-${i}`}
                   className="wf-head text-5xl md:text-8xl"
-                  style={{ color: i === 0 ? "#644ff2" : "#04042b" }}
+                  style={{ color: i === 0 ? "#a296f7" : "#ffffff" }}
                   initial={reduce ? false : { y: "110%" }}
                   animate={{ y: "0%" }}
                   transition={{ duration: 0.9, delay: reduce ? 0 : INTRO_REVEAL_AT + i * 0.08, ease: [0.16, 1, 0.3, 1] }}
@@ -81,7 +81,7 @@ export default function Hero() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: reduce ? 0 : INTRO_REVEAL_AT + 0.25, ease: [0.16, 1, 0.3, 1] }}
           >
-            <p className="mx-auto mt-8 max-w-xl text-base leading-7 md:text-lg" style={{ color: "#4b4b66" }}>
+            <p className="mx-auto mt-8 max-w-xl text-base leading-7 md:text-lg" style={{ color: "rgba(255,255,255,0.85)" }}>
               Air, sea, rail and road freight plus customs brokerage — one partner moving your cargo from China, Europe and beyond to your door in Georgia.
             </p>
           </motion.div>
