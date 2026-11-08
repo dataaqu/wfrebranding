@@ -17,6 +17,18 @@ export default function Hero() {
   const [minimized, setMinimized] = useState(false);
   const [zoomed, setZoomed] = useState(false);
   const collapsed = closed || minimized;
+  // Remember the open window's height so the hero keeps its size when the window is closed/minimised.
+  const winRef = useRef<HTMLDivElement>(null);
+  const [winH, setWinH] = useState<number | undefined>(undefined);
+  useEffect(() => {
+    const el = winRef.current;
+    if (!el || collapsed) return;
+    const update = () => setWinH(el.offsetHeight);
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [collapsed]);
   const videoDesktop = useRef<HTMLVideoElement>(null);
   const videoMobile = useRef<HTMLVideoElement>(null);
   useEffect(() => {
@@ -97,16 +109,17 @@ export default function Hero() {
         {/* product preview — tms.weforward preview as a macOS-style window: close / minimise / zoom */}
         <motion.div
           data-anim="hero-dashboard"
-          className="relative z-10 mx-auto px-6 md:px-10"
+          className="relative z-10 mx-auto flex flex-col px-6 md:px-10"
+          style={{ minHeight: winH }}
           initial={reduce ? false : { opacity: 0, y: 80, maxWidth: 1152 }}
-          animate={{ opacity: 1, y: 0, maxWidth: zoomed ? 1440 : 1152, paddingBottom: minimized ? 64 : 0 }}
-          transition={{ default: { duration: 1, delay: reduce ? 0 : INTRO_REVEAL_AT + 0.35, ease: EASE }, maxWidth: { duration: reduce ? 0 : 0.55, ease: EASE }, paddingBottom: { duration: reduce ? 0 : 0.5, ease: EASE } }}
+          animate={{ opacity: 1, y: 0, maxWidth: zoomed ? 1440 : 1152 }}
+          transition={{ default: { duration: 1, delay: reduce ? 0 : INTRO_REVEAL_AT + 0.35, ease: EASE }, maxWidth: { duration: reduce ? 0 : 0.55, ease: EASE } }}
         >
           <AnimatePresence mode="wait" initial={false}>
           {closed ? (
             <motion.div
               key="dock"
-              className="flex justify-center pb-16 pt-2"
+              className="flex flex-1 items-center justify-center"
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 16 }}
@@ -124,6 +137,7 @@ export default function Hero() {
           ) : (
           <motion.div
             key="window"
+            ref={winRef}
             className="overflow-hidden border border-white/15 bg-ink-900 p-2 pt-0 shadow-[0_30px_80px_-20px_rgba(4,4,43,0.45)]"
             style={{ ...chamfer(28, "tr"), transformOrigin: "50% 0%" }}
             initial={reduce ? false : { opacity: 0, scale: 0.92, y: 40 }}
