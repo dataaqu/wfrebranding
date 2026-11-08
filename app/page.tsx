@@ -6,6 +6,7 @@ import Tracking from "@/components/sections/Tracking";
 import Network from "@/components/sections/Network";
 import Contact from "@/components/sections/Contact";
 import Faq from "@/components/sections/Faq";
+import Footer from "@/components/sections/Footer";
 import Routes from "@/components/sections/Routes";
 
 export default function Page() {
@@ -19,5 +20,6 @@ export default function Page() {
     <Tracking />
     <Contact />
     <Faq />
+    <Footer />
   </main>;
 }
