@@ -96,9 +96,7 @@ export function LogoHorizontal({ markColor = "var(--color-brand-500)", wordColor
 /*         markIntroDone() starts the page's own entrance animations.   */
 /* Reduced motion: static logo, then a 300 ms fade; no panels.         */
 /* ------------------------------------------------------------------ */
-const EXPO_OUT = [0.16, 1, 0.3, 1] as const;
 const EXPO_IN_OUT = [0.87, 0, 0.13, 1] as const;
-const BACK_OUT = [0.34, 1.56, 0.64, 1] as const;
 const POWER_IN = [0.7, 0, 0.84, 0] as const;
 // One colour, stepped through its guideline tints (Accent Purple 100 / 80 / 60 / 40 %).
 const PANELS = ["#644ff2", "#8373f5", "#a296f7", "#c1b9fa"];
@@ -197,17 +195,6 @@ export function Intro({ onDone }: { onDone?: () => void }) {
   );
 }
 
-/** Oversized cropped W — the signature graphic element. Place inside a relative, overflow-hidden parent. */
-export function WGraphic({ className = "", color = "var(--color-brand-500)" }: { className?: string; color?: string }) {
-  return (
-    <svg viewBox="0 0 184 237" preserveAspectRatio="xMinYMin meet" className={`pointer-events-none absolute ${className}`} aria-hidden="true">
-      <polygon points={MARK_DOT_L} fill={color} />
-      <polygon points={MARK_DOT_R} fill={color} />
-      <polygon points={MARK_BODY} fill={color} />
-    </svg>
-  );
-}
-
 /* ------------------------------------------------------------------ */
 /* Chamfer — 45° cut corner used on frames, tags and header bars.      */
 /* ------------------------------------------------------------------ */
@@ -220,15 +207,6 @@ export function chamfer(size = 32, corner: "tr" | "bl" | "br" | "tl" = "tr"): Re
     tl: `polygon(${s} 0, 100% 0, 100% 100%, 0 100%, 0 ${s})`,
   };
   return { clipPath: map[corner] };
-}
-
-export function Tag({ children, tone = "lime" }: { children: React.ReactNode; tone?: "lime" | "purple" | "white" }) {
-  const c = tone === "lime" ? "bg-volt-500 text-ink-950" : tone === "purple" ? "bg-brand-500 text-white" : "bg-white text-ink-950";
-  return (
-    <span className={`wf-sub inline-flex items-center gap-2 whitespace-nowrap px-3 py-1.5 pr-5 text-xs font-bold ${c}`} style={chamfer(10, "br")}>
-      {children}
-    </span>
-  );
 }
 
 /* ------------------------------------------------------------------ */
@@ -297,9 +275,6 @@ export const IconShield = ({ className = "h-6 w-6" }: IconProps) => (
 );
 export const IconClock = ({ className = "h-6 w-6" }: IconProps) => (
   <svg viewBox="0 0 24 24" className={className} fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 1 1 0 20 10 10 0 0 1 0-20zm-1 4.5V13l4.6 3.2.9-1.3-3.5-2.4V6.5h-2z" /></svg>
-);
-export const IconPhone = ({ className = "h-5 w-5" }: IconProps) => (
-  <svg viewBox="0 0 24 24" className={className} fill="currentColor" aria-hidden="true"><path d="M6.6 2.5 9.8 6l-1.9 2.6a12 12 0 0 0 7.5 7.5L18 14.2l3.5 3.2-1.8 3.6c-.4.6-1 .9-1.7.9C9.9 21.9 2.1 14.1 2.1 6c0-.7.3-1.3.9-1.7l3.6-1.8z" /></svg>
 );
 export const IconArrow = ({ className = "h-4 w-4" }: IconProps) => (
   <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true"><path d="M4 12h15M13 5l7 7-7 7" /></svg>

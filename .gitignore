@@ -7,5 +7,5 @@ out/
 .threadrig/
 
 # original service videos (large) - keep out of git; web versions live in public/assets/services/
-videos/services/*
-!videos/services/README.md
+assets-src/videos/services/*
+!assets-src/videos/services/README.md

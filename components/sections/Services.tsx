@@ -170,7 +170,7 @@ export default function Services() {
 
       {/* Mobile: stacked */}
       <div className="mx-auto mt-12 max-w-6xl space-y-14 px-6 md:px-10 lg:hidden">
-        {SERVICES.map((s, i) => (
+        {SERVICES.map((s) => (
           <article key={s.title}>
             <h3 className="sr-only">{s.title}</h3>
             <p className="text-xl leading-snug tracking-tight" style={{ color: NAVY }}>{s.text}</p>

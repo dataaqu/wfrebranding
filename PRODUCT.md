@@ -40,12 +40,12 @@ All transport modes — air, sea, rail, road — plus customs brokerage, handled
 ## Brand Commitments
 
 - Name: **WEFORWARD**. Tagline: **“You deal. We deliver.”**
-- Brand guidelines: `WEFORWARD_Brand_Guidelines_Compressed.pdf`; W mark and wordmark in `components/brand/design-system.tsx`; typeface Loos Wide (`public/assets/fonts`).
+- Brand guidelines: see git history (removed from tree); W mark and wordmark in `components/brand/design-system.tsx`; typeface Loos Wide (web `public/assets/fonts`).
 - Founded 2009; voice from the confirmed about copy: experience, loyalty, teamwork; “your cargo’s journey is our top priority”.
 
 ## Evidence on Hand
 
-- Assets: brand guidelines PDF, logo, Loos Wide fonts, hero videos (`public/assets/hero-*.webm`), Earth texture (NASA Blue Marble, public domain).
+- Assets: logo, Loos Wide fonts, hero videos (`public/assets/hero-*.webm`), Earth texture (NASA Blue Marble, public domain).
 - Network memberships and carriers as published on weforward.ge: WCA China Global, JCtrans, WCA World, All World Shipping; carriers Maersk, Hapag-Lloyd, CMA CGM, COSCO, Evergreen, Turkish Airlines, Qatar Airways, Lufthansa, Air France, flydubai (logos in `public/assets/logos/`). weforward.ge's "MSC" image is the MSC Cruises logo — not used.
 - **No** confirmed figures (volumes, clients, warehouse size), **no** client logos or testimonials, **no** certifications on hand. Do not invent any of these.
 - Unverified figures currently in design copy (14 days China → Georgia by rail, 33 t per 40HC, contact +995 591 32 12 92 / info@weforward.ge) come from the design files — confirm before treating as final.
