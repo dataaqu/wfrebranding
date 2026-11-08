@@ -28,13 +28,17 @@ function CardChrome({ title, reduce }: { title: string; reduce: boolean }) {
       <WMark className="absolute right-7 top-7 z-10 h-12 w-auto md:h-14" color="#ffffff" />
       <div className="absolute inset-x-0 -bottom-px z-10 h-[19%] min-h-[120px]" style={{ background: LIME, clipPath: BAND }}>
         <div className="absolute inset-0 flex items-center overflow-hidden px-7 md:px-9">
-          <AnimatePresence mode="popLayout" initial={false}>
-            <motion.p key={title} aria-hidden="true" className="wf-head text-[clamp(1.6rem,2.8vw,3rem)] leading-[0.95]" style={{ color: NAVY }}
-              initial={reduce ? false : { y: "110%" }} animate={{ y: 0 }} exit={reduce ? undefined : { y: "-110%" }}
-              transition={{ duration: 0.7, ease: EASE }}>
-              {title}
-            </motion.p>
-          </AnimatePresence>
+          {/* Mask = one line box; old title leaves first, then the new one rises in (never both visible). */}
+          <div data-title-mask className="overflow-hidden py-1">
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.p key={title} aria-hidden="true" className="wf-head text-[clamp(1.6rem,2.8vw,3rem)] leading-[0.95]" style={{ color: NAVY }}
+                initial={reduce ? false : { y: "115%" }}
+                animate={{ y: 0, transition: { duration: 0.45, ease: [0.16, 1, 0.3, 1] } }}
+                exit={reduce ? undefined : { y: "-115%", transition: { duration: 0.25, ease: [0.7, 0, 0.84, 0] } }}>
+                {title}
+              </motion.p>
+            </AnimatePresence>
+          </div>
         </div>
       </div>
     </>
