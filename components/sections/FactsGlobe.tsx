@@ -129,14 +129,14 @@ export default function FactsGlobe({ progress, reduce }: { progress: MotionValue
     const routeMat = new THREE.MeshBasicMaterial({ color: 0x463dc1, transparent: true, opacity: 0 });
     const tbV = toVec(...TBILISI);
     ORIGINS.forEach(([lat, lon]) => {
-      spin.add(dashedTube(arc(toVec(lat, lon), tbV, 0.32, 96), 0.0055, 0.03, 0.018, routeMat));
+      spin.add(dashedTube(arc(toVec(lat, lon), tbV, 0.32, 96), 0.0032, 0.026, 0.016, routeMat));
     });
 
     // tilted dashed orbit rings around the globe (not spinning with the earth)
     const orbitMat = new THREE.MeshBasicMaterial({ color: 0x8373f5, transparent: true, opacity: 0 });
     [[1.28, 0.95, 0.35], [1.42, 1.25, -0.5]].forEach(([r, tx, tz]) => {
       const pts = new THREE.EllipseCurve(0, 0, r, r, 0, Math.PI * 2).getPoints(240).map((p) => new THREE.Vector3(p.x, 0, p.y));
-      const ring = dashedTube(pts, 0.0035, 0.05, 0.035, orbitMat);
+      const ring = dashedTube(pts, 0.0022, 0.045, 0.032, orbitMat);
       ring.rotation.set(tx, 0, tz);
       globe.add(ring);
     });
@@ -180,7 +180,7 @@ export default function FactsGlobe({ progress, reduce }: { progress: MotionValue
       // vertical: globe centre starts ~1 radius below the panel bottom, ends just below centre
       const worldPerPx = (2 * Math.tan((camera.fov * Math.PI) / 360) * dist) / h;
       const yStartPx = -h * 0.06 - pxRadius; // globe top just under the figures, rest cropped
-      const yEndPx = -h * 0.13;
+      const yEndPx = 0;
       globe.position.y = lerp(yStartPx, yEndPx, k) * worldPerPx;
 
       globe.rotation.x = 0.42; // show the northern hemisphere
