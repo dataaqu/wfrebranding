@@ -30,6 +30,29 @@ const reducedMotion = () => typeof window !== "undefined" && matchMedia("(prefer
 
 /* ---------- geometry (same maths as the concept) ---------- */
 type Built = { leg: Leg; d: string; pts: [number, number][]; cum: number[]; length: number; duration: number; start: number };
+/** Centripetal Catmull-Rom through the waypoints: organic curves that never overshoot sharp turns. */
+function smooth(a: [number, number][], samples = 14): [number, number][] {
+  if (a.length < 3) return a;
+  const P = [a[0], ...a, a[a.length - 1]];
+  const out: [number, number][] = [a[0]];
+  const tj = (ti: number, p: [number, number], q: [number, number]) => ti + Math.max(1e-4, Math.sqrt(Math.hypot(q[0] - p[0], q[1] - p[1])));
+  for (let i = 0; i < P.length - 3; i++) {
+    const [p0, p1, p2, p3] = [P[i], P[i + 1], P[i + 2], P[i + 3]];
+    const t0 = 0, t1 = tj(t0, p0, p1), t2 = tj(t1, p1, p2), t3 = tj(t2, p2, p3);
+    for (let k = 1; k <= samples; k++) {
+      const t = t1 + ((t2 - t1) * k) / samples;
+      const lerp = (u: [number, number], v: [number, number], ta: number, tb: number): [number, number] => {
+        const w = (t - ta) / (tb - ta || 1);
+        return [u[0] + (v[0] - u[0]) * w, u[1] + (v[1] - u[1]) * w];
+      };
+      const A1 = lerp(p0, p1, t0, t1), A2 = lerp(p1, p2, t1, t2), A3 = lerp(p2, p3, t2, t3);
+      const B1 = lerp(A1, A2, t0, t2), B2 = lerp(A2, A3, t1, t3);
+      out.push(lerp(B1, B2, t1, t2));
+    }
+  }
+  return out;
+}
+
 function legGeometry(leg: Leg) {
   const a = leg.points.map(project);
   if (leg.arc) {
@@ -42,7 +65,8 @@ function legGeometry(leg: Leg) {
     }
     return { d: `M${p0} Q${c[0]},${c[1]} ${p2}`, pts };
   }
-  return { d: a.map((p, i) => (i ? "L" : "M") + p.join(",")).join(" "), pts: a };
+  const pts = smooth(a);
+  return { d: pts.map((p, i) => (i ? "L" : "M") + p[0].toFixed(2) + "," + p[1].toFixed(2)).join(" "), pts };
 }
 function buildGeometry(route: Route): Built[] {
   let start = 0;
@@ -91,6 +115,25 @@ const GRATICULE = (() => {
 
 /* ---------- icons ---------- */
 const WAREHOUSE_D = "M12 3 2 8v13h4v-9h12v9h4V8zM8 14h8v2H8zm0 3h8v2H8z";
+const PIN_D = "M12 2a7 7 0 0 0-7 7c0 5.2 7 13 7 13s7-7.8 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z";
+const FLAG_D = "M5 3h2v18H5zM8 4h11l-2.6 4.2L19 12.5H8z";
+const ANCHOR_D = "M12 2.5a2.75 2.75 0 0 0-1 5.31V10H8v2h3v7.85A7.5 7.5 0 0 1 4.6 14H7L3.75 9.5.5 14h2.07A9.5 9.5 0 0 0 12 22a9.5 9.5 0 0 0 9.43-8h2.07l-3.25-4.5L17 14h2.4A7.5 7.5 0 0 1 13 19.85V12h3v-2h-3V7.81A2.75 2.75 0 0 0 12 2.5zm0 1.75a1 1 0 1 1 0 2 1 1 0 0 1 0-2z";
+const SHIELD_D = "M12 2 4 5v6c0 5.1 3.4 9.7 8 11 4.6-1.3 8-5.9 8-11V5zm-1 14.2-3.7-3.7 1.4-1.4 2.3 2.3 4.6-4.6 1.4 1.4z";
+type StopType = "origin" | "destination" | "warehouse" | "terminal" | "border" | "port" | "air" | "stop";
+/** What a stop is, from the engine's data: kind, adjacent leg modes, and its name. */
+function stopType(route: Route, i: number): StopType {
+  const s = route.stops[i], name = L(s.name);
+  if (i === route.stops.length - 1) return "destination";
+  if (s.kind === "warehouse") return "warehouse";
+  if (s.kind === "terminal") return "terminal";
+  if (i === 0) return "origin";
+  if (/border|lars|kapıkule|kapikule|sarpi|bridge|sadakhlo/i.test(name)) return "border";
+  const before = route.legs[i - 1]?.mode, after = route.legs[i]?.mode;
+  if (/air gateway/i.test(name) || before === "air" || after === "air") return "air";
+  if ([before, after].some((m) => m === "ferry" || m === "sea" || m === "connection") || /port|gateway/i.test(name)) return "port";
+  return "stop";
+}
+const STOP_LABEL: Record<StopType, string> = { origin: "Origin", destination: "Destination", warehouse: "Warehouse", terminal: "Rail terminal", border: "Border crossing", port: "Port", air: "Air gateway", stop: "Stop" };
 const I = {
   pin: <svg viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor" aria-hidden="true"><path d="M12 2a7 7 0 0 0-7 7c0 5.2 7 13 7 13s7-7.8 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z" /></svg>,
   globe: <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M3 12h18M12 3c3 3.5 3 14.5 0 18M12 3c-3 3.5-3 14.5 0 18" /></svg>,
@@ -197,6 +240,11 @@ export default function Routes() {
       modeMemory.current[r.mode] = { id: r.id, values: r.options };
       setEngine(engine);
       setShapes(shapes);
+      fetch("/routes-engine/world-50m.json").then((r) => r.json()).then((world: { id: string; name: string; d: string }[]) => {
+        if (!alive) return;
+        const meta = new Map(shapes.map((c) => [c.id, c]));
+        setShapes(world.map((w) => ({ id: w.id, name: w.name, d: w.d, region: meta.get(w.id)?.region ?? "", primary: meta.get(w.id)?.primary ?? false })));
+      }).catch(() => {});
       setRoute(r);
       setRegion(r.region);
       setView(params.get("mapView") === "world" ? "world" : "focus");
@@ -683,18 +731,22 @@ export default function Routes() {
                         onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); focusRouteStop(i); } }} style={{ cursor: "pointer" }}>
                         <path ref={(el) => setStopRef(i, "leader", el)} fill="none" stroke={INK} strokeOpacity={0.5} vectorEffect="non-scaling-stroke" />
                         <g ref={(el) => setStopRef(i, "inner", el)}>
-                          {wh ? (
-                            <>
-                              <circle r={13} fill={INK} stroke={current ? LIME : "#fff"} strokeWidth={2} />
-                              <path d={WAREHOUSE_D} fill={LIME} transform="translate(-8,-8) scale(0.667)" />
-                              <title>{L(s.name)}</title>
-                            </>
-                          ) : (
-                            <>
-                              <circle r={last ? 13 : 10} fill={last ? LIME : "#fff"} stroke={INK} strokeWidth={last ? 2 : 1.5} />
-                              <text textAnchor="middle" dominantBaseline="central" y={0.5} fontSize={last ? 11 : 9} fontWeight={700} fill={INK}>{i + 1}</text>
-                            </>
-                          )}
+                          {(() => {
+                            const t = stopType(route, i);
+                            const glyph = (d: string, color: string, size = 14) => <path d={d} fill={color} transform={`translate(${-size / 2},${-size / 2}) scale(${size / 24})`} />;
+                            if (t === "destination") return (<><circle r={14} fill={LIME} stroke={INK} strokeWidth={2} />{glyph(FLAG_D, INK, 15)}</>);
+                            if (t === "warehouse") return (<><circle r={13} fill={INK} stroke={current ? LIME : "#fff"} strokeWidth={2} />{glyph(WAREHOUSE_D, LIME, 15)}</>);
+                            return (
+                              <>
+                                <circle r={11} fill="#fff" stroke={current ? PURPLE : INK} strokeWidth={1.5} />
+                                {t === "terminal" ? <g style={{ color: PURPLE }}>{mapIcon("rail", 13)}</g>
+                                  : t === "air" ? <g style={{ color: PURPLE }}>{mapIcon("air", 13)}</g>
+                                  : t === "stop" ? <circle r={3.5} fill={PURPLE} />
+                                  : glyph(t === "origin" ? PIN_D : t === "border" ? SHIELD_D : ANCHOR_D, PURPLE, 13)}
+                              </>
+                            );
+                          })()}
+                          <title>{`${STOP_LABEL[stopType(route, i)]} · ${L(s.name)}`}</title>
                           {(i === 0 || last || wh) && (
                             <text y={i === 0 || wh ? -22 : 29} textAnchor="middle" fontSize={12} fontWeight={600} fill={INK} stroke="#f8f7ff" strokeWidth={3} paintOrder="stroke">{first(s)}</text>
                           )}
