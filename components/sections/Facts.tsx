@@ -20,7 +20,7 @@ export default function Facts() {
         <div className="relative h-full w-full overflow-hidden">
           {/* WEFORWARD wordmark on the layer behind the globe (canvas is transparent) */}
           <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-[8vh] flex justify-center">
-            <Wordmark className="h-auto w-[82vw] md:w-[60vw]" color="#04042b" />
+            <Wordmark className="h-auto w-[72vw] md:w-[50vw]" color="#04042b" />
           </div>
           <FactsGlobe progress={scrollYProgress} reduce={reduce} />
         </div>
