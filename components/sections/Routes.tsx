@@ -551,7 +551,7 @@ export default function Routes() {
   const pct = Math.round(((legIndex + 1) / route.legs.length) * 100);
 
   return (
-    <section id="routes" className="relative pb-28 pt-4 md:pt-6" style={{ background: "linear-gradient(to bottom, #f8f7ff 0, #f8f7ff calc(100% - 280px), #ffffff 100%)", color: INK }}>
+    <section id="routes" className="relative pb-10 pt-4 md:pt-6" style={{ background: "linear-gradient(to bottom, #f8f7ff 0, #f8f7ff calc(100% - 200px), #ffffff 100%)", color: INK }}>
       {/* rounded transition: a dome of the section colour rising behind the globe (Facts sits on a higher layer) */}
       <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 bottom-full h-[22vw] overflow-hidden">
         <div className="absolute left-1/2 top-0 h-[60vw] w-[125vw] -translate-x-1/2 rounded-[50%]" style={{ background: "#f8f7ff" }} />

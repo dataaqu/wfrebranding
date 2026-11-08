@@ -52,7 +52,7 @@ function Step({ index }: { index: number }) {
   const words = s.text.split(" ");
 
   return (
-    <div ref={ref} className="relative flex min-h-svh flex-col justify-center py-24">
+    <div ref={ref} className="relative flex min-h-[62svh] flex-col justify-center py-10">
       <motion.h3 className="text-[clamp(1.5rem,2.3vw,2.25rem)] font-medium leading-tight tracking-tight" style={{ color: reduce ? NAVY : headColor }}>
         {s.title}
       </motion.h3>
@@ -76,17 +76,17 @@ export default function Services() {
   useMotionValueEvent(scrollYProgress, "change", (v) => setActive(Math.min(SERVICES.length - 1, Math.max(0, Math.floor(v * SERVICES.length)))));
 
   return (
-    <section id="services" className="bg-white pb-24 pt-16 md:pt-24">
-      <div className="mx-auto max-w-[1440px] px-6 md:px-10 lg:pl-[120px] xl:pl-[176px]">
-        <Reveal id="services-head">
-          <h2 className="wf-head text-4xl md:text-6xl" style={{ color: NAVY }}>Services</h2>
-        </Reveal>
+    <section id="services" aria-labelledby="services-title" className="bg-white pb-16 pt-6">
+      <h2 id="services-title" className="sr-only">Services</h2>
+      <div className="mx-auto max-w-6xl px-6 md:px-10 lg:hidden">
+        <Reveal id="services-head"><p aria-hidden="true" className="wf-head text-4xl" style={{ color: NAVY }}>Services</p></Reveal>
       </div>
 
       {/* Desktop: scrolling steps left, sticky notched video right */}
-      <div className="mx-auto mt-8 hidden max-w-[1440px] grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] gap-16 px-10 lg:grid xl:px-16">
-        <div ref={steps} className="pl-20 xl:pl-28">
-          {SERVICES.map((s, i) => <Step key={s.title} index={i} />)}
+      <div className="mx-auto hidden max-w-[1440px] grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] gap-16 px-10 lg:grid xl:px-16">
+        <div className="pl-20 pt-[6svh] xl:pl-28">
+          <Reveal id="services-head-desktop"><p aria-hidden="true" className="wf-head text-6xl" style={{ color: NAVY }}>Services</p></Reveal>
+          <div ref={steps}>{SERVICES.map((s, i) => <Step key={s.title} index={i} />)}</div>
         </div>
         <div className="relative">
           <div className="sticky top-[6svh] h-[88svh] overflow-hidden rounded-lg bg-[#0b0b1f]" style={{ clipPath: NOTCH }}>
