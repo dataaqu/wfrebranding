@@ -2,7 +2,7 @@
 
 import { Reveal } from "@/components/brand/design-system";
 
-// Logos as published on weforward.ge (memberships + carriers). Grey by default, colour on hover.
+// Logos as published on weforward.ge (memberships + carriers). Grey by default; hover lights the cell and shows the real logo colours.
 const MEMBERSHIPS = [
   { src: "m1", name: "WCA China Global" },
   { src: "m2", name: "JCtrans" },
@@ -41,15 +41,20 @@ function Grid({ label, items, cols }: { label: string; items: { src: string; nam
       </div>
       <ul className={`relative grid border-l border-[#e6e5ef] pt-px ${cols}`}>
         {items.map((it) => (
-          <li key={it.src} className="group relative flex h-32 items-center justify-center border-b border-r border-t border-[#e6e5ef] -mt-px px-6 md:h-40 md:px-8">
+          <li key={it.src} className="group relative flex h-32 items-center justify-center border-b border-r border-t border-[#e6e5ef] -mt-px px-6 hover:z-20 md:h-40 md:px-8">
             <Plus className="-left-[6px] -top-[6px]" />
             <Plus className="-right-[6px] -top-[6px]" />
             <Plus className="-bottom-[6px] -left-[6px]" />
             <Plus className="-bottom-[6px] -right-[6px]" />
-            <span aria-hidden="true" className="absolute inset-x-0 -top-px h-px origin-left scale-x-0 bg-[#d5f476] transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-x-100" />
+            {/* hover glow: lime frame + soft fill, row rules extend and fade; quick in, slow out */}
+            <span aria-hidden="true" className="pointer-events-none absolute -inset-px opacity-0 transition-opacity duration-700 ease-out group-hover:opacity-100 group-hover:duration-150">
+              <span className="absolute inset-0 border border-[#cdee5c] bg-[radial-gradient(ellipse_at_center,rgba(213,244,118,0.30),rgba(213,244,118,0.10)_70%)]" />
+              <span className="absolute -left-1/2 -right-1/2 top-0 h-px bg-[linear-gradient(to_right,transparent,#cdee5c_33%,#cdee5c_67%,transparent)]" />
+              <span className="absolute -left-1/2 -right-1/2 bottom-0 h-px bg-[linear-gradient(to_right,transparent,#cdee5c_33%,#cdee5c_67%,transparent)]" />
+            </span>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={`/assets/logos/${it.src}.webp`} alt={it.name} loading="lazy"
-              className="max-h-10 w-auto max-w-[78%] object-contain opacity-55 grayscale transition-[filter,opacity] duration-300 group-hover:opacity-100 group-hover:grayscale-0 md:max-h-12" />
+              className="max-h-10 w-auto max-w-[78%] object-contain relative opacity-55 grayscale transition-[filter,opacity] duration-700 group-hover:opacity-100 group-hover:grayscale-0 group-hover:duration-200 md:max-h-12" />
           </li>
         ))}
       </ul>
