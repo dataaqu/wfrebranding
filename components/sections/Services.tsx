@@ -4,13 +4,13 @@ import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useMotionValueEvent, useReducedMotion, useScroll, useSpring, useTransform, type MotionValue } from "motion/react";
 import { Reveal, WMark } from "@/components/brand/design-system";
 
-// Services and copy as on weforward.ge. `media` = clip in /assets/services (warehousing reuses road until its own clip exists).
+// Services and copy as on weforward.ge. `media` = clip in /assets/services (sources: videos/services, 1-6 in this order).
 const SERVICES = [
   { title: "Road freight", text: "Flexible trucking services for door-to-door delivery across regional networks.", media: "road" },
   { title: "Sea freight", text: "Cost-effective ocean shipping solutions for your cargo worldwide with reliable transit times.", media: "sea" },
   { title: "Air freight", text: "Fast and secure air cargo services for time-sensitive shipments across the globe.", media: "air" },
   { title: "Rail freight", text: "Eco-friendly rail transport solutions connecting major trade routes efficiently.", media: "rail" },
-  { title: "Warehousing", text: "Modern storage facilities with inventory management and distribution services.", media: "road" },
+  { title: "Warehousing", text: "Modern storage facilities with inventory management and distribution services.", media: "warehouse" },
   { title: "Customs brokerage", text: "Expert customs clearance and trade compliance services to expedite your shipments.", media: "customs" },
 ];
 const EASE = [0.45, 0, 0.15, 1] as const;
