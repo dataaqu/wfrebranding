@@ -94,7 +94,7 @@ export default function Hero() {
           </motion.div>
         </div>
 
-        {/* product preview — WEFORWARD Track as a macOS-style window: close / minimise / zoom */}
+        {/* product preview — tms.weforward preview as a macOS-style window: close / minimise / zoom */}
         <motion.div
           data-anim="hero-dashboard"
           className="relative z-10 mx-auto px-6 md:px-10"
@@ -118,7 +118,7 @@ export default function Hero() {
                 onClick={() => setClosed(false)}
                 className="wf-sub inline-flex min-h-11 items-center gap-3 border border-white/25 bg-white/10 px-5 text-xs font-bold text-white backdrop-blur transition-colors hover:bg-white/20"
               >
-                <WMark className="h-5 w-5" /> Open WEFORWARD Track
+                <WMark className="h-5 w-5" /> Open <span className="normal-case">tms.weforward</span>
               </button>
             </motion.div>
           ) : (
@@ -152,7 +152,7 @@ export default function Hero() {
                   </button>
                 ))}
               </div>
-              <span className="pointer-events-none absolute inset-x-0 text-center text-xs" style={{ color: "#8b8ba3" }}>WEFORWARD Track</span>
+              <span className="pointer-events-none absolute inset-x-0 text-center text-xs" style={{ color: "#8b8ba3" }}>tms.weforward</span>
             </div>
             <div className="overflow-hidden">
            <div style={{ minWidth: 960 }}>
