@@ -35,7 +35,7 @@ export default function Facts() {
   const sectionRef = useRef<HTMLElement>(null);
   const { scrollYProgress } = useScroll({ target: sectionRef, offset: ["start start", "end end"] });
   // figures rise from the bottom of the pinned panel into the centre during the first part of the scroll
-  const figY = useTransform(scrollYProgress, [0, 0.3], reduce ? ["0vh", "0vh"] : ["32vh", "0vh"]);
+  const figY = useTransform(scrollYProgress, [0, 0.15], reduce ? ["0vh", "0vh"] : ["6vh", "0vh"]);
 
   return (
     <section id="facts" ref={sectionRef} className="relative" style={{ height: reduce ? "100vh" : "260vh" }}>
@@ -49,7 +49,7 @@ export default function Facts() {
 
           {/* figures */}
           <motion.div className="absolute inset-0 z-10 flex items-center justify-center px-4" style={{ y: figY }}>
-            <div className="grid w-full max-w-5xl grid-cols-2 gap-y-8 md:-mt-[18vh] md:grid-cols-4">
+            <div className="grid w-full max-w-5xl grid-cols-2 gap-y-8 -mt-[34vh] md:-mt-[30vh] md:grid-cols-4">
               {FACTS.map((f, i) => (
                 <div key={f.label} className={`flex flex-col items-center text-center ${i > 0 ? "md:border-l" : ""} ${i % 2 === 1 ? "border-l" : ""}`} style={{ borderColor: "rgba(4,4,43,0.35)" }}>
                   <p className="whitespace-nowrap text-4xl leading-none md:text-5xl xl:text-6xl" style={{ fontFamily: '"Loos Wide", Inter, sans-serif', fontWeight: 300, color: "#04042b", letterSpacing: "-0.02em", textShadow: "0 0 24px rgba(241,239,255,0.9)" }}>

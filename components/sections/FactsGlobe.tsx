@@ -50,6 +50,27 @@ function arc(from: THREE.Vector3, to: THREE.Vector3, lift = 0.22, segments = 64)
   return pts;
 }
 
+/** Dashed line as real geometry (WebGL ignores line width): short tubes along the polyline. */
+function dashedTube(points: THREE.Vector3[], radius: number, dash: number, gap: number, mat: THREE.Material) {
+  const group = new THREE.Group();
+  // cumulative length along the polyline
+  const cum = [0];
+  for (let i = 1; i < points.length; i++) cum.push(cum[i - 1] + points[i - 1].distanceTo(points[i]));
+  const total = cum[cum.length - 1];
+  const at = (d: number) => {
+    let i = 1;
+    for (; i < cum.length - 1 && cum[i] < d; i++);
+    const t = (d - cum[i - 1]) / Math.max(1e-6, cum[i] - cum[i - 1]);
+    return points[i - 1].clone().lerp(points[i], Math.min(1, Math.max(0, t)));
+  };
+  for (let start = 0; start < total; start += dash + gap) {
+    const end = Math.min(total, start + dash);
+    const pts = [0, 0.25, 0.5, 0.75, 1].map((u) => at(start + (end - start) * u));
+    group.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 6, radius, 6, false), mat));
+  }
+  return group;
+}
+
 export default function FactsGlobe({ progress, reduce }: { progress: MotionValue<number>; reduce: boolean }) {
   const hostRef = useRef<HTMLDivElement>(null);
 
@@ -105,20 +126,17 @@ export default function FactsGlobe({ progress, reduce }: { progress: MotionValue
     pulse.lookAt(toVec(...TBILISI, 2));
     spin.add(pulse);
 
-    const routeMat = new THREE.LineDashedMaterial({ color: 0x644ff2, dashSize: 0.03, gapSize: 0.02, linewidth: 2, transparent: true, opacity: 0 });
+    const routeMat = new THREE.MeshBasicMaterial({ color: 0x463dc1, transparent: true, opacity: 0 });
     const tbV = toVec(...TBILISI);
     ORIGINS.forEach(([lat, lon]) => {
-      const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints(arc(toVec(lat, lon), tbV)), routeMat);
-      line.computeLineDistances();
-      spin.add(line);
+      spin.add(dashedTube(arc(toVec(lat, lon), tbV, 0.32, 96), 0.0055, 0.03, 0.018, routeMat));
     });
 
     // tilted dashed orbit rings around the globe (not spinning with the earth)
-    const orbitMat = new THREE.LineDashedMaterial({ color: 0x8373f5, dashSize: 0.04, gapSize: 0.03, transparent: true, opacity: 0 });
+    const orbitMat = new THREE.MeshBasicMaterial({ color: 0x8373f5, transparent: true, opacity: 0 });
     [[1.28, 0.95, 0.35], [1.42, 1.25, -0.5]].forEach(([r, tx, tz]) => {
-      const pts = new THREE.EllipseCurve(0, 0, r, r, 0, Math.PI * 2).getPoints(160).map((p) => new THREE.Vector3(p.x, 0, p.y));
-      const ring = new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(pts), orbitMat);
-      ring.computeLineDistances();
+      const pts = new THREE.EllipseCurve(0, 0, r, r, 0, Math.PI * 2).getPoints(240).map((p) => new THREE.Vector3(p.x, 0, p.y));
+      const ring = dashedTube(pts, 0.0035, 0.05, 0.035, orbitMat);
       ring.rotation.set(tx, 0, tz);
       globe.add(ring);
     });
@@ -154,15 +172,15 @@ export default function FactsGlobe({ progress, reduce }: { progress: MotionValue
       // fit: radius in screen ~ 0.36 of min(w,h) at the end, ~1.1 of width at the start
       const k = easeOut(range(p, 0.05, 0.7));
       const fitEnd = 0.34 * Math.min(w, h * 1.15);
-      const fitStart = 0.62 * Math.max(w, h);
+      const fitStart = Math.min((w < 768 ? 0.62 : 0.37) * w, 0.8 * h); // Emons-like start: moderate globe under the figures
       const pxRadius = lerp(fitStart, fitEnd, k);
       const dist = (R * h) / (2 * Math.tan((camera.fov * Math.PI) / 360) * pxRadius);
       camera.position.set(0, 0, dist);
       camera.lookAt(0, 0, 0);
       // vertical: globe centre starts ~1 radius below the panel bottom, ends just below centre
       const worldPerPx = (2 * Math.tan((camera.fov * Math.PI) / 360) * dist) / h;
-      const yStartPx = -(h / 2) - pxRadius * 0.55;
-      const yEndPx = -h * 0.04;
+      const yStartPx = -h * 0.06 - pxRadius; // globe top just under the figures, rest cropped
+      const yEndPx = -h * 0.13;
       globe.position.y = lerp(yStartPx, yEndPx, k) * worldPerPx;
 
       globe.rotation.x = 0.42; // show the northern hemisphere
@@ -172,8 +190,8 @@ export default function FactsGlobe({ progress, reduce }: { progress: MotionValue
       purple.opacity = f;
       lime.opacity = f;
       ringMat.opacity = f;
-      routeMat.opacity = f * 0.9;
-      orbitMat.opacity = f * 0.55;
+      routeMat.opacity = f;
+      orbitMat.opacity = f * 0.7;
       const pp = (tSec % 2) / 2;
       pulse.scale.setScalar(1 + pp * 1.8);
       pulseMat.opacity = reduce ? 0 : f * (1 - pp) * 0.9;
