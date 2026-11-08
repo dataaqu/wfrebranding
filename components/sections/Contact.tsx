@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { chamfer, WMark } from "@/components/brand/design-system";
 import dotmap from "@/data/dotmap.json";
@@ -8,6 +9,30 @@ import dotmap from "@/data/dotmap.json";
 // Contact / quote request. Front-end only for now: submit validates and shows a confirmation,
 // nothing is sent until a backend is connected (see onSubmit).
 const NAVY = "#04042b", PURPLE = "#644ff2", LIME = "#d5f476";
+
+const PaperPlane = ({ className = "h-4 w-4" }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.497.497 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z" />
+    <path d="m21.854 2.147-10.94 10.939" />
+  </svg>
+);
+
+/** The send icon takes off: a small pull-back, then an accelerating arc up and to the right until it leaves the viewport. */
+function FlyingPlane({ from, onDone }: { from: DOMRect; onDone: () => void }) {
+  const vw = window.innerWidth, vh = window.innerHeight;
+  const dx = vw - from.left + 120, dy = -(from.top + 160);
+  return createPortal(
+    <motion.div aria-hidden="true" className="pointer-events-none fixed z-[100] text-white"
+      style={{ left: from.left, top: from.top, width: from.width, height: from.height, filter: "drop-shadow(0 6px 10px rgba(4,4,43,0.25))" }}
+      initial={{ x: 0, y: 0, rotate: 0, scale: 1 }}
+      animate={{ x: [0, -10, dx * 0.32, dx], y: [0, 6, dy * 0.22, dy], rotate: [0, -12, 4, 12], scale: [1, 0.92, 1.9, 2.6], color: ["#ffffff", "#ffffff", "#644ff2", "#644ff2"] }}
+      transition={{ duration: 1.25, times: [0, 0.16, 0.5, 1], ease: [[0.3, 0, 0.6, 1], [0.4, 0, 0.9, 0.6], [0.5, 0, 1, 1]] }}
+      onAnimationComplete={onDone}>
+      <PaperPlane className="h-full w-full" />
+    </motion.div>,
+    document.body,
+  );
+}
 
 // Dotted Eurasia (equirectangular, lon -12..112, lat 8..66) with a single lime point at Tbilisi.
 const MAP_W = dotmap.lon[1] - dotmap.lon[0], MAP_H = dotmap.lat[1] - dotmap.lat[0];
@@ -35,6 +60,8 @@ function DotMap() {
 export default function Contact() {
   const reduce = useReducedMotion();
   const [sent, setSent] = useState<{ first: string; email: string } | null>(null);
+  const [flight, setFlight] = useState<{ from: DOMRect; first: string; email: string } | null>(null);
+  const planeRef = useRef<HTMLSpanElement>(null);
 
   const FIELD = "h-12 w-full appearance-none bg-white px-4 text-[14px] text-[#04042b] outline-none ring-1 ring-inset ring-[#e4e1ff] transition-[box-shadow] duration-150 placeholder:text-[#9a99ad] [@media(hover:hover)]:hover:ring-[#c9c5ff] focus:ring-2 focus:ring-[#644ff2] [&:user-invalid]:ring-[#e5484d]";
   const LABEL = "mb-2 block text-[13px] font-medium text-[#04042b]";
@@ -44,7 +71,10 @@ export default function Contact() {
     e.preventDefault();
     const f = new FormData(e.currentTarget);
     // TODO: send `f` to the quote endpoint once it exists.
-    setSent({ first: String(f.get("first") || ""), email: String(f.get("email") || "") });
+    const data = { first: String(f.get("first") || ""), email: String(f.get("email") || "") };
+    const rect = planeRef.current?.getBoundingClientRect();
+    if (reduce || !rect) setSent(data);
+    else setFlight({ from: rect, ...data });
   }
 
   return (
@@ -94,9 +124,9 @@ export default function Contact() {
                   <textarea name="message" rows={4} placeholder="e.g. 2 pallets of electronics from Shenzhen to Tbilisi, ready in March. Add origin, destination, weight or anything we should know."
                     className={`${FIELD} h-auto resize-none py-3 leading-6`} /></label>
                 <div className="sm:col-span-2">
-                  <button type="submit" className="group flex h-12 w-full items-center justify-center gap-2 text-[14px] font-medium bg-[#04042b] text-white transition-[background-color,transform] duration-150 ease-out hover:bg-[#644ff2] active:scale-[0.99]">
-                    Send request
-                    <svg viewBox="0 0 24 24" className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+                  <button type="submit" disabled={!!flight} className="group flex h-12 w-full items-center justify-center gap-2 text-[14px] font-medium bg-[#04042b] text-white transition-[background-color,transform] duration-150 ease-out hover:bg-[#644ff2] active:scale-[0.99]">
+                    {flight ? "Sending…" : "Send request"}
+                    <span ref={planeRef} className={`inline-block h-[18px] w-[18px] transition-transform duration-200 ease-out group-hover:-translate-y-0.5 group-hover:translate-x-0.5 ${flight ? "opacity-0" : ""}`}><PaperPlane className="h-full w-full" /></span>
                   </button>
                 </div>
               </motion.form>
@@ -104,6 +134,7 @@ export default function Contact() {
           </AnimatePresence>
         </div>
       </div>
+      {flight && <FlyingPlane from={flight.from} onDone={() => { setSent({ first: flight.first, email: flight.email }); setFlight(null); }} />}
     </section>
   );
 }
