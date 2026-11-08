@@ -1,8 +1,6 @@
 "use client";
 
-import { useRef } from "react";
-import { motion, useReducedMotion, useScroll, useTransform } from "motion/react";
-import { chamfer, LogoHorizontal, Wordmark } from "@/components/brand/design-system";
+import { chamfer, LogoHorizontal } from "@/components/brand/design-system";
 
 // Contact details as published on weforward.ge.
 const NAVY = "#04042b";
@@ -32,14 +30,9 @@ function Col({ title, children }: { title: string; children: React.ReactNode }) 
 const LINK = "group inline-flex items-center gap-1.5 text-[15px] text-white/75 transition-colors duration-200 hover:text-white";
 
 export default function Footer() {
-  const reduce = useReducedMotion();
-  const ref = useRef<HTMLElement>(null);
-  // giant wordmark rises out of the bottom edge as the footer scrolls in
-  const { scrollYProgress } = useScroll({ target: ref, offset: ["start end", "end end"] });
-  const wordY = useTransform(scrollYProgress, [0.35, 1], ["45%", "0%"]);
 
   return (
-    <footer ref={ref} id="footer" className="relative isolate overflow-hidden text-white">
+    <footer id="footer" className="relative isolate overflow-hidden text-white">
       <div aria-hidden="true" className="absolute inset-0 -z-10" style={{ background: NAVY, ...chamfer(56, "tl") }} />
 
       <div className="mx-auto max-w-6xl px-6 pt-20 md:px-10 md:pt-28">
@@ -70,7 +63,7 @@ export default function Footer() {
         </div>
 
         {/* bottom bar */}
-        <div className="mt-20 flex flex-wrap items-center justify-between gap-4 border-t border-white/10 py-6 text-[13px] text-white/45">
+        <div className="mt-20 flex flex-wrap items-center justify-between gap-4 border-t border-white/10 pb-10 pt-6 text-[13px] text-white/45">
           <span>© {new Date().getFullYear()} WEFORWARD LLC · Tbilisi, Georgia · Since 2009</span>
           <a href="#main" className="group inline-flex items-center gap-2 text-white/60 transition-colors hover:text-white">
             Back to top
@@ -81,12 +74,6 @@ export default function Footer() {
         </div>
       </div>
 
-      {/* giant wordmark, cropped by the bottom edge */}
-      <div aria-hidden="true" className="pointer-events-none relative mx-auto -mb-[1.2vw] mt-4 max-w-[1600px] px-4 md:px-6">
-        <motion.div style={{ y: reduce ? "0%" : wordY }}>
-          <Wordmark className="h-auto w-full" color="#644ff2" />
-        </motion.div>
-      </div>
     </footer>
   );
 }
