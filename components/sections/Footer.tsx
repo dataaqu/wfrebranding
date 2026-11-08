@@ -22,13 +22,13 @@ const SOCIAL: { name: string; href: string; d: string }[] = [
   { name: "LinkedIn", href: "https://www.linkedin.com/company/weforward/", d: "M6.9 8.9H3.8V20h3.1V8.9ZM5.35 4a1.8 1.8 0 1 0 0 3.6 1.8 1.8 0 0 0 0-3.6ZM20.2 13.6c0-3-.65-5-4.1-5-1.66 0-2.77.9-3.22 1.77h-.05V8.9H9.9V20H13v-5.5c0-1.45.27-2.85 2.07-2.85 1.77 0 1.8 1.66 1.8 2.94V20h3.1l.23-6.4Z" },
 ];
 
-/** Eased scroll to the top: duration grows with distance (0.7–1.6s), easeInOutCubic,
+/** Fast eased scroll to the top (≈0.4-0.75s by distance), easeInOutCubic,
  *  cancelled as soon as the visitor scrolls, touches or presses a key. */
 function scrollToTop() {
   const start = window.scrollY;
   if (start <= 0) return;
   if (matchMedia("(prefers-reduced-motion: reduce)").matches) { window.scrollTo(0, 0); return; }
-  const duration = Math.min(1600, Math.max(700, start * 0.18));
+  const duration = Math.min(750, Math.max(380, start * 0.05)); // fast flick: the page flashes past and lands on the hero
   const ease = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
   const html = document.documentElement, prev = html.style.scrollBehavior;
   html.style.scrollBehavior = "auto";
