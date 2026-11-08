@@ -375,7 +375,11 @@ export default function Routes() {
       // desktop: the console floats over the right of the map and controls over the bottom-left — keep the route clear of them
       const desk = !expanded && matchMedia("(min-width: 1024px)").matches;
       const panelW = panelRef.current?.offsetWidth || 0, dockH = dockRef.current?.offsetHeight || 0;
-      insets.current = desk ? { left: 0, top: 64, right: panelW + 48, bottom: dockH + 32 } : { left: 0, top: 56, right: 0, bottom: 0 };
+      // keep the route out of the faded edges (10% sides, 14% top/bottom) as well as from under the floating UI
+      const fadeX = expanded ? 0 : width * 0.1, fadeY = expanded ? 0 : height * 0.14;
+      insets.current = desk
+        ? { left: fadeX, top: Math.max(72, fadeY), right: panelW + 48, bottom: Math.max(dockH + 32, fadeY) }
+        : { left: fadeX * 0.6, top: Math.max(56, fadeY), right: fadeX * 0.6, bottom: Math.max(96, fadeY) };
       const ins = insets.current, visW = Math.max(200, width - ins.left - ins.right), visH = Math.max(160, height - ins.top - ins.bottom);
       let vb: Box;
       if (view === "focus") vb = focusBox(route, focused, visW, visH);
@@ -509,10 +513,16 @@ export default function Routes() {
       </div>
 
       {/* ===== full-bleed map; on desktop the console floats over its right side, controls over the bottom-left ===== */}
-      <div className="relative mt-10 lg:mx-4 xl:mx-6">
+      <div className="relative mt-10">
         {expanded && <div className="fixed inset-0 z-[65] bg-ink-950/40 backdrop-blur-[2px]" onClick={() => setExpanded(false)} aria-hidden="true" />}
         <div ref={worldRef} data-mode={route.mode} className={`relative overflow-hidden ${expanded ? `fixed inset-3 z-[70] md:inset-8 ${SURFACE}` : "h-[64vh] min-h-[460px] lg:h-[82vh] lg:min-h-[720px] lg:max-h-[940px]"}`} style={{ background: "#f8f7ff", ...(expanded ? chamfer(28, "tr") : {}) }}>
-          <div ref={mapBoxRef} className="absolute inset-0">
+          <div ref={mapBoxRef} className="absolute inset-0" style={expanded ? undefined : {
+            // land fades into the section background at every edge, so the map has no visible frame
+            maskImage: "linear-gradient(to bottom, transparent 0, #000 14%, #000 86%, transparent 100%), linear-gradient(to right, transparent 0, #000 10%, #000 90%, transparent 100%)",
+            WebkitMaskImage: "linear-gradient(to bottom, transparent 0, #000 14%, #000 86%, transparent 100%), linear-gradient(to right, transparent 0, #000 10%, #000 90%, transparent 100%)",
+            maskComposite: "intersect",
+            WebkitMaskComposite: "source-in",
+          }}>
             <svg ref={svgRef} viewBox="0 0 1000 500" preserveAspectRatio="xMidYMid meet" className="absolute inset-0 h-full w-full" role="group" aria-label={`${L(route.title)}. ${route.stops.map((s) => L(s.name)).join(" → ")}. ${COPY.note}`}>
                   <rect x={-6000} y={-4000} width={13000} height={9000} fill="#f8f7ff" />
                   <path d={GRATICULE} fill="none" stroke="#e8e5fb" strokeWidth={1} vectorEffect="non-scaling-stroke" />
