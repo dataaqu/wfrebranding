@@ -61,7 +61,7 @@ function Box({ b, i, progress }: { b: (typeof BOXES)[number]; i: number; progres
   const start = 0.08 * Math.abs(i - 3); // centre box first, then outward
   const y = useTransform(progress, [start, start + 0.55], ["70%", "0%"]);
   return (
-    <motion.div className="relative shrink-0" style={{ y, height: "var(--box-h)", width: `calc(var(--box-h) * ${b.w / BOX_H})`, marginTop: b.lift }}>
+    <motion.div className="relative shrink-0 hover:z-10" style={{ y, height: "var(--box-h)", width: `calc(var(--box-h) * ${b.w / BOX_H})`, marginTop: b.lift }}>
       <div className="relative h-full w-full transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-3">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={`/assets/containers/${b.src}.webp`} alt="" draggable={false} className="absolute inset-0 h-full w-full select-none" />
@@ -80,7 +80,7 @@ function ContainerRow() {
   const { scrollYProgress } = useScroll({ target: ref, offset: ["start end", "end end"] });
   const still = useMotionValue(1);
   return (
-    <div ref={ref} aria-hidden="true" className="relative mt-8 h-[78px] overflow-hidden [--box-h:96px] md:h-[100px] md:[--box-h:122px]">
+    <div ref={ref} aria-hidden="true" className="relative mt-8 h-[78px] [clip-path:inset(-48px_0_0_0)] [--box-h:96px] md:h-[100px] md:[--box-h:122px]">
       <div className="absolute left-1/2 top-0 flex -translate-x-1/2 gap-4 md:gap-5">
         {BOXES.map((b, i) => <Box key={i} b={b} i={i} progress={reduce ? still : scrollYProgress} />)}
       </div>
