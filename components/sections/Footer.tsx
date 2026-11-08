@@ -1,6 +1,6 @@
 "use client";
 
-import { chamfer, LogoHorizontal } from "@/components/brand/design-system";
+import { chamfer } from "@/components/brand/design-system";
 
 // Contact details as published on weforward.ge.
 const NAVY = "#04042b";
@@ -61,7 +61,8 @@ export default function Footer() {
         {/* logo + three link columns, four equal tracks */}
         <div className="grid grid-cols-2 gap-x-10 gap-y-12 lg:grid-cols-4">
           <div className="col-span-2 lg:col-span-1">
-            <LogoHorizontal size="sm" />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/assets/logos/logo-footer.webp" alt="WEFORWARD — You deal. We deliver." width={500} height={240} className="h-20 w-auto md:h-24" />
           </div>
 
             <Col title="EXPLORE">
