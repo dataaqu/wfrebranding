@@ -5,3 +5,7 @@ out/
 .DS_Store
 *.log
 .threadrig/
+
+# original service videos (large) - keep out of git; web versions live in public/assets/services/
+videos/services/*
+!videos/services/README.md
