@@ -1,15 +1,22 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { motion, useReducedMotion } from "motion/react";
-import { INTRO_REVEAL_AT, LogoHorizontal, chamfer, Button, IconPlane, IconShip, IconTrain, IconTruck, IconDoc, IconContainer, IconShield, IconClock, IconArrow } from "@/components/brand/design-system";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { INTRO_REVEAL_AT, LogoHorizontal, WMark, chamfer, Button, IconPlane, IconShip, IconTrain, IconTruck, IconDoc, IconContainer, IconShield, IconClock, IconArrow } from "@/components/brand/design-system";
 import { SERIES, MILESTONES, KPIS, AXIS_MAX, SIDEBAR } from "@/data/landing";
+
+const EASE = [0.16, 1, 0.3, 1] as const;
 
 export default function Hero() {
   const reduce = useReducedMotion();
   const [lang, setLang] = useState("EN");
   const [hover, setHover] = useState<{ ri: number; si: number } | null>(null);
   const [tourTip, setTourTip] = useState(true);
+  // macOS-style window controls on the product preview
+  const [closed, setClosed] = useState(false);
+  const [minimized, setMinimized] = useState(false);
+  const [zoomed, setZoomed] = useState(false);
+  const collapsed = closed || minimized;
   const videoDesktop = useRef<HTMLVideoElement>(null);
   const videoMobile = useRef<HTMLVideoElement>(null);
   useEffect(() => {
@@ -23,18 +30,18 @@ export default function Hero() {
     <section id="hero" className="relative overflow-hidden">
         {/* Full-bleed hero: the port video covers header, headline and the top of the product preview;
             the preview runs on past the video into the page (Flexport-style). Navy scrim for legibility. Reduced motion: no autoplay, poster only. */}
-        <div aria-hidden="true" className="absolute inset-x-0 top-0 bottom-[180px] overflow-hidden md:bottom-[280px]" style={{ background: "#04042b" }}>
+        <div aria-hidden="true" className={`absolute inset-x-0 top-0 overflow-hidden transition-[bottom] duration-500 ${collapsed ? "bottom-0" : "bottom-[180px] md:bottom-[280px]"}`} style={{ background: "#04042b" }}>
           <div style={{ position: "absolute", inset: 0, backgroundImage: "url('/assets/hero-port.png')", backgroundSize: "cover", backgroundPosition: "center 55%" }} />
           <video ref={videoDesktop} className="hidden md:block" src="/assets/hero-720.webm" poster="/assets/hero-port.png" muted loop playsInline autoPlay={!reduce} preload="metadata"
             style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", objectFit: "cover" }} />
           <video ref={videoMobile} className="md:hidden" src="/assets/hero-540.webm" poster="/assets/hero-port.png" muted loop playsInline autoPlay={!reduce} preload="metadata"
             style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", objectFit: "cover" }} />
-          <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(4,4,43,0.72) 0%, rgba(4,4,43,0.5) 45%, rgba(4,4,43,0.3) 100%)" }} />
+          <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(4,4,43,0.5) 0%, rgba(4,4,43,0.28) 45%, rgba(4,4,43,0.12) 100%)" }} />
         </div>
 
         {/* header */}
         <header id="header" className="relative z-20">
-          <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-5 py-4 md:gap-6 md:px-10" style={{ borderBottom: "1px solid rgba(255,255,255,0.15)" }}>
+          <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-5 py-4 md:gap-6 md:px-10">
             <a href="#main" aria-label="WEFORWARD home"><LogoHorizontal size="sm" wordColor="#ffffff" /></a>
             <nav aria-label="Main" className="hidden items-center gap-7 lg:flex">
               {[["Services", "#services"], ["Rail from China", "#rail"], ["Customs", "#brokerage"], ["How it works", "#how"], ["Contact", "#quote"]].map(([t, h]) => (
@@ -87,15 +94,67 @@ export default function Hero() {
           </motion.div>
         </div>
 
-        {/* product preview — WEFORWARD Track (cropped at the bottom like a window) */}
+        {/* product preview — WEFORWARD Track as a macOS-style window: close / minimise / zoom */}
         <motion.div
           data-anim="hero-dashboard"
-          className="relative z-10 mx-auto max-w-6xl px-6 md:px-10"
-          initial={reduce ? false : { opacity: 0, y: 80 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 1, delay: reduce ? 0 : INTRO_REVEAL_AT + 0.35, ease: [0.16, 1, 0.3, 1] }}
+          className="relative z-10 mx-auto px-6 md:px-10"
+          initial={reduce ? false : { opacity: 0, y: 80, maxWidth: 1152 }}
+          animate={{ opacity: 1, y: 0, maxWidth: zoomed ? 1440 : 1152, paddingBottom: minimized ? 64 : 0 }}
+          transition={{ default: { duration: 1, delay: reduce ? 0 : INTRO_REVEAL_AT + 0.35, ease: EASE }, maxWidth: { duration: reduce ? 0 : 0.55, ease: EASE }, paddingBottom: { duration: reduce ? 0 : 0.5, ease: EASE } }}
         >
-          <div className="overflow-hidden border border-white/15 bg-ink-900 p-2 shadow-[0_30px_80px_-20px_rgba(4,4,43,0.45)]" style={chamfer(28, "tr")}>
+          <AnimatePresence mode="wait" initial={false}>
+          {closed ? (
+            <motion.div
+              key="dock"
+              className="flex justify-center pb-16 pt-2"
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 16 }}
+              transition={{ duration: reduce ? 0 : 0.35, ease: EASE }}
+            >
+              <button
+                type="button"
+                data-anim="window-reopen"
+                onClick={() => setClosed(false)}
+                className="wf-sub inline-flex min-h-11 items-center gap-3 border border-white/25 bg-white/10 px-5 text-xs font-bold text-white backdrop-blur transition-colors hover:bg-white/20"
+              >
+                <WMark className="h-5 w-5" /> Open WEFORWARD Track
+              </button>
+            </motion.div>
+          ) : (
+          <motion.div
+            key="window"
+            className="overflow-hidden border border-white/15 bg-ink-900 p-2 pt-0 shadow-[0_30px_80px_-20px_rgba(4,4,43,0.45)]"
+            style={{ ...chamfer(28, "tr"), transformOrigin: "50% 0%" }}
+            initial={reduce ? false : { opacity: 0, scale: 0.92, y: 40 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.92, y: 40 }}
+            transition={{ duration: reduce ? 0 : 0.45, ease: EASE }}
+          >
+            {/* ---- window title bar (traffic lights) ---- */}
+            <div className="group/tl relative flex h-9 items-center px-1">
+              <div className="relative z-10 flex items-center gap-2">
+                {([
+                  { key: "close", color: "#ff5f57", label: "Close preview window", onClick: () => { setClosed(true); setMinimized(false); setZoomed(false); }, glyph: <path d="M3.5 3.5l5 5M8.5 3.5l-5 5" /> },
+                  { key: "minimize", color: "#febc2e", label: minimized ? "Restore preview window" : "Minimise preview window", onClick: () => setMinimized((m) => !m), glyph: <path d="M3 6h6" /> },
+                  { key: "zoom", color: "#28c840", label: zoomed ? "Exit full width" : "Expand to full width", onClick: () => { setZoomed((z) => !z); setMinimized(false); }, glyph: <path d="M3.5 8.5V5l3.5 3.5H3.5zM8.5 3.5V7L5 3.5h3.5z" fill="currentColor" stroke="none" /> },
+                ] as const).map((b) => (
+                  <button
+                    key={b.key}
+                    type="button"
+                    data-anim={`window-${b.key}`}
+                    aria-label={b.label}
+                    onClick={b.onClick}
+                    className="inline-flex h-3 w-3 items-center justify-center rounded-full transition-transform hover:scale-110 active:scale-95"
+                    style={{ background: b.color, color: "rgba(0,0,0,0.6)", boxShadow: "inset 0 0 0 0.5px rgba(0,0,0,0.25)" }}
+                  >
+                    <svg viewBox="0 0 12 12" className="h-2 w-2 opacity-0 transition-opacity group-hover/tl:opacity-100" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" aria-hidden="true">{b.glyph}</svg>
+                  </button>
+                ))}
+              </div>
+              <span className="pointer-events-none absolute inset-x-0 text-center text-xs" style={{ color: "#8b8ba3" }}>WEFORWARD Track</span>
+            </div>
+            <div className="overflow-hidden">
            <div style={{ minWidth: 960 }}>
             {/* ---- app bar ---- */}
             <div className="flex items-center gap-5 bg-ink-950 px-6" style={{ height: 60 }}>
@@ -122,7 +181,13 @@ export default function Hero() {
               </div>
             </div>
 
-            {/* ---- app body ---- */}
+            {/* ---- app body (collapses on minimise) ---- */}
+            <motion.div
+              initial={false}
+              animate={{ height: minimized ? 0 : "auto", opacity: minimized ? 0 : 1 }}
+              transition={{ duration: reduce ? 0 : 0.5, ease: EASE }}
+              style={{ overflow: "hidden" }}
+            >
             <div className="bg-white px-7 pb-0 pt-7" style={{ color: "#04042b" }}>
               <div className="flex items-start justify-between gap-4">
                 <div>
@@ -249,8 +314,12 @@ export default function Hero() {
                 </div>
               </div>
             </div>
+            </motion.div>
            </div>
-          </div>
+            </div>
+          </motion.div>
+          )}
+          </AnimatePresence>
         </motion.div>
       </section>
   );
