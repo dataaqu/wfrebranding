@@ -109,7 +109,7 @@ export default function Footer() {
         <div className="grid grid-cols-2 gap-x-10 gap-y-12 lg:grid-cols-4">
           <div className="col-span-2 lg:col-span-1">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/assets/logos/logo-footer.webp" alt="WEFORWARD — You deal. We deliver." width={500} height={240} className="h-20 w-auto md:h-24" />
+            <img src="/assets/logos/logo-footer.webp" alt="WEFORWARD - You deal. We deliver." width={500} height={240} className="h-20 w-auto md:h-24" />
           </div>
 
             <Col title="EXPLORE">

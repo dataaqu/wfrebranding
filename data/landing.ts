@@ -57,7 +57,7 @@ export const ROUTE_MODES = [
 export type Route = { title: string; note: string; segments: [string, boolean][]; stops: [number, number, string, string][] };
 export const ROUTES: Record<string, Route> = {
   "road-aktau": {
-    title: "China to Georgia", note: "Yiwu, Dongguan or Khorgos consolidation. Trailers cross from China into Kazakhstan at Khorgos, then take the Aktau–Alat ferry over the Caspian.",
+    title: "China to Georgia", note: "Yiwu, Dongguan or Khorgos consolidation. Trailers cross from China into Kazakhstan at Khorgos, then take the Aktau-Alat ferry over the Caspian.",
     segments: [["M535 320 L470 270 L420 220 L360 190 L300 175 L250 150 L210 140 L172 170", false], ["M172 170 L130 225", true], ["M130 225 L95 212 L70 205", false]],
     stops: [[535, 320, "Yiwu", "China · consolidation warehouse"], [300, 175, "Khorgos", "China → Kazakhstan border"], [172, 170, "Aktau", "Kazakhstan · Caspian ferry port"], [130, 225, "Alat", "Ferry arrives · Azerbaijan"], [95, 212, "Red Bridge", "Azerbaijan → Georgia border"], [70, 205, "Tbilisi", "Customs clearance & delivery"]],
   },
@@ -67,7 +67,7 @@ export const ROUTES: Record<string, Route> = {
     stops: [[535, 320, "Yiwu", "China · consolidation warehouse"], [300, 175, "Khorgos", "China → Kazakhstan border"], [190, 95, "Atyrau", "Kazakhstan · transit"], [140, 85, "Astrakhan", "Russia · transit"], [75, 160, "Upper Lars", "Russia → Georgia border"], [70, 205, "Tbilisi", "Customs clearance & delivery"]],
   },
   rail: {
-    title: "China to Georgia", note: "Block trains from Xi'an via Altynkol to Aktau, Caspian ferry to Baku, then rail to Tbilisi — about 14 days door to door.",
+    title: "China to Georgia", note: "Block trains from Xi'an via Altynkol to Aktau, Caspian ferry to Baku, then rail to Tbilisi - about 14 days door to door.",
     segments: [["M450 250 L380 205 L300 175 L250 150 L210 140 L172 170", false], ["M172 170 L130 225", true], ["M130 225 L95 212 L70 205", false]],
     stops: [[450, 250, "Xi'an", "China · rail terminal"], [300, 175, "Altynkol", "China → Kazakhstan gauge change"], [172, 170, "Aktau", "Kazakhstan · Caspian ferry port"], [130, 225, "Baku", "Azerbaijan · rail"], [95, 212, "Gardabani", "Azerbaijan → Georgia border"], [70, 205, "Tbilisi", "Rail terminal & delivery"]],
   },

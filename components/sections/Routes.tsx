@@ -349,7 +349,7 @@ export default function Routes() {
     const pct = (e / total) * 100;
     if (progressRef.current) {
       progressRef.current.value = pct.toFixed(1);
-      progressRef.current.setAttribute("aria-valuetext", `${Math.round(pct)}% · ${COPY[b.leg.mode]} · ${L(b.leg.from.name)} — ${L(b.leg.to.name)}`);
+      progressRef.current.setAttribute("aria-valuetext", `${Math.round(pct)}% · ${COPY[b.leg.mode]} · ${L(b.leg.from.name)} - ${L(b.leg.to.name)}`);
     }
     if (outputRef.current) outputRef.current.textContent = Math.round(pct) + "%";
     setLegIndex((prev) => (prev === idx ? prev : idx));
@@ -835,7 +835,7 @@ export default function Routes() {
                 <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center" style={{ background: INK, color: LIME }}>{modeIcon(leg.mode, "h-5 w-5")}</span>
                 <div className="min-w-0 flex-1">
                   <p className={LABEL} style={{ color: "#686879" }}>Route preview</p>
-                  <strong data-leg-name className="mt-0.5 block truncate text-sm font-semibold" style={{ color: INK }}>{first(leg.from)} — {first(leg.to)}</strong>
+                  <strong data-leg-name className="mt-0.5 block truncate text-sm font-semibold" style={{ color: INK }}>{first(leg.from)} - {first(leg.to)}</strong>
                 </div>
                 <span className="text-xs tabular-nums" style={{ color: "#4b4b66" }}><b style={{ color: INK }}>{String(legIndex + 1).padStart(2, "0")}</b> / {String(route.legs.length).padStart(2, "0")}</span>
                 <span aria-hidden="true" className="absolute inset-x-0 bottom-0 h-[2px] origin-left transition-transform duration-300 ease-out" style={{ background: PURPLE, transform: `scaleX(${pct / 100})` }} />

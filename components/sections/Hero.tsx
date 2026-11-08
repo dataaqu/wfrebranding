@@ -349,7 +349,7 @@ export default function Hero() {
             transition={{ duration: 0.6, delay: reduce ? 0 : 0.25, ease: [0.16, 1, 0.3, 1] }}
           >
             <p className="mx-auto mt-5 max-w-xl text-base leading-7 md:text-lg" style={{ color: "rgba(255,255,255,0.85)" }}>
-              Air, sea, rail and road freight plus customs brokerage — one partner moving your cargo from China, Europe and beyond to your door in Georgia.
+              Air, sea, rail and road freight plus customs brokerage - one partner moving your cargo from China, Europe and beyond to your door in Georgia.
             </p>
           </motion.div>
         </div>

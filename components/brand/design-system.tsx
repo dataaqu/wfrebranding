@@ -70,7 +70,7 @@ export function LogoHorizontal({ markColor = "var(--color-brand-500)", wordColor
   const h = size === "lg" ? "h-14" : size === "sm" ? "h-8" : "h-10";
   const w = size === "lg" ? "h-6" : size === "sm" ? "h-3.5" : "h-4";
   return (
-    <span className="inline-flex items-center gap-3" aria-label="WEFORWARD — You deal. We deliver.">
+    <span className="inline-flex items-center gap-3" aria-label="WEFORWARD - You deal. We deliver.">
       <WMark className={`${h} w-auto`} color={markColor} />
       <span className="flex flex-col">
         <Wordmark className={`${w} w-auto`} color={wordColor} />
