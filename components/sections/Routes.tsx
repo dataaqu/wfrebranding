@@ -505,7 +505,9 @@ export default function Routes() {
 
 
         {/* ===== 1. controls: choose ===== */}
-        <section ref={panelRef} id="route-explorer" aria-labelledby="route-title" className={`relative z-20 mt-10 bg-white p-5 md:p-6 ${SURFACE}`} style={chamfer(24, "tr")}>
+        <section ref={panelRef} id="route-explorer" aria-labelledby="route-title" className="relative isolate z-20 mt-10 p-5 md:p-6">
+          {/* chamfered surface lives on its own layer: clip-path on the card itself would clip the country dropdown */}
+          <div aria-hidden="true" className="absolute inset-0 -z-10 bg-white" style={chamfer(24, "tr")} />
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
             <div className="shrink-0">
               <span className={LABEL} style={{ color: "#686879" }}>Transport</span>
