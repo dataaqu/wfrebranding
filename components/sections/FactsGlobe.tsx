@@ -72,7 +72,7 @@ export default function FactsGlobe({ progress, reduce }: { progress: MotionValue
     const fill = new THREE.Mesh(shapeGeo, fillMat);
     fill.renderOrder = 2; // drawn over the glow
     spin.add(fill);
-    const edgeMat = new THREE.LineBasicMaterial({ color: 0x7f9f12, transparent: true, opacity: 0 });
+    const edgeMat = new THREE.LineBasicMaterial({ color: LIME, transparent: true, opacity: 0 });
     const edge = new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(GEORGIA.map(([lon, lat]) => toVec(lat, lon, R * 1.004))), edgeMat);
     edge.renderOrder = 3;
     spin.add(edge);
@@ -147,7 +147,7 @@ export default function FactsGlobe({ progress, reduce }: { progress: MotionValue
       edgeMat.opacity = f;
       const breathe = reduce ? 0.75 : 0.6 + 0.4 * Math.sin(tSec * 2.2); // phosphor glow
       glowMat.opacity = f * breathe;
-      glow.scale.setScalar(0.36 + 0.1 * breathe);
+      glow.scale.setScalar(0.14 + 0.03 * breathe);
 
       renderer.render(scene, camera);
       needsRender = false;
