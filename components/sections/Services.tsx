@@ -50,9 +50,17 @@ function Video({ name, active, eager, load }: { name: string; active: boolean; e
   useEffect(() => {
     const v = ref.current;
     if (!v || !load) return;
-    // each time a service becomes active its clip restarts, so the photo → wireframe story plays from the top
-    if (active) { v.currentTime = 0; void v.play().catch(() => {}); }
-    else v.pause();
+    // Fast scrolling flips `active` several times a second; seeking + starting a decoder on every flip is
+    // what stutters. So: while active, the (paused) first frame / poster shows and playback only starts
+    // once the service has been dwelt on; when it goes inactive it pauses at once and rewinds only after
+    // its layer has faded out, ready to start from the top next time without a visible jump.
+    if (active) {
+      const t = window.setTimeout(() => { void v.play().catch(() => {}); }, 450);
+      return () => clearTimeout(t);
+    }
+    v.pause();
+    const t = window.setTimeout(() => { if (v.currentTime > 0) v.currentTime = 0; }, 1300);
+    return () => clearTimeout(t);
   }, [active, load]);
   // nothing is fetched (not even the poster) until the section is near the viewport
   if (!load) return <div className="h-full w-full bg-[#0b0b1f]" />;
