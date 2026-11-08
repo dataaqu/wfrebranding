@@ -1,5 +1,8 @@
 "use client";
 
+import { useRef } from "react";
+import { motion, useMotionValue, useReducedMotion, useScroll, useTransform, type MotionValue } from "motion/react";
+
 import { chamfer, WMark, Wordmark } from "@/components/brand/design-system";
 
 // Contact details as published on weforward.ge.
@@ -43,34 +46,43 @@ function scrollToTop() {
 
 // Branded containers parked along the bottom edge (AI-rendered blank boxes, real logo overlaid in code).
 const BOXES = [
-  { src: "purple40", w: 1222, mark: "#ffffff", word: "#ffffff", lift: 10 },
+  { src: "purple40", w: 1222, mark: "#ffffff", word: "#ffffff", lift: 6 },
   { src: "white20", w: 728, mark: "#644ff2", word: "#04042b", lift: 0 },
-  { src: "lime20", w: 738, mark: "#04042b", word: "#04042b", lift: 18 },
-  { src: "purple20", w: 822, mark: "#ffffff", word: "#ffffff", lift: 4 },
-  { src: "white20", w: 728, mark: "#644ff2", word: "#04042b", lift: 14 },
+  { src: "lime20", w: 738, mark: "#04042b", word: "#04042b", lift: 11 },
+  { src: "purple20", w: 822, mark: "#ffffff", word: "#ffffff", lift: 2 },
+  { src: "white20", w: 728, mark: "#644ff2", word: "#04042b", lift: 9 },
   { src: "purple40", w: 1222, mark: "#ffffff", word: "#ffffff", lift: 0 },
-  { src: "lime20", w: 738, mark: "#04042b", word: "#04042b", lift: 8 },
+  { src: "lime20", w: 738, mark: "#04042b", word: "#04042b", lift: 5 },
 ];
 const BOX_H = 300; // source image height
 
-function ContainerRow() {
-  const row = BOXES.map((b, i) => (
-    <div key={i} className="group/box relative shrink-0 transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-5"
-      style={{ height: "var(--box-h)", width: `calc(var(--box-h) * ${b.w / BOX_H})`, marginTop: b.lift }}>
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={`/assets/containers/${b.src}.webp`} alt="" draggable={false} className="absolute inset-0 h-full w-full select-none" />
-      <div className="absolute inset-0 flex flex-col items-center justify-start gap-[6%] pt-[13%]">
-        <WMark className="h-[30%] w-auto" color={b.mark} />
-        <Wordmark className="h-[11%] w-auto" color={b.word} />
-      </div>
-    </div>
-  ));
+/** One container: rises out of the bottom edge as the footer scrolls in (staggered by index). */
+function Box({ b, i, progress }: { b: (typeof BOXES)[number]; i: number; progress: MotionValue<number> }) {
+  const start = 0.08 * Math.abs(i - 3); // centre box first, then outward
+  const y = useTransform(progress, [start, start + 0.55], ["70%", "0%"]);
   return (
-    <div aria-hidden="true" className="relative mt-6 h-[110px] overflow-hidden [--box-h:140px] md:h-[150px] md:[--box-h:190px]">
-      {/* two copies side by side, sliding by one copy's width = seamless loop; pauses on hover */}
-      <div className="wf-marquee flex w-max hover:[animation-play-state:paused]">
-        <div className="flex gap-6 pr-6">{row}</div>
-        <div className="flex gap-6 pr-6">{row}</div>
+    <motion.div className="relative shrink-0" style={{ y, height: "var(--box-h)", width: `calc(var(--box-h) * ${b.w / BOX_H})`, marginTop: b.lift }}>
+      <div className="relative h-full w-full transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-3">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={`/assets/containers/${b.src}.webp`} alt="" draggable={false} className="absolute inset-0 h-full w-full select-none" />
+        <div className="absolute inset-0 flex flex-col items-center justify-start gap-[6%] pt-[13%]">
+          <WMark className="h-[30%] w-auto" color={b.mark} />
+          <Wordmark className="h-[11%] w-auto" color={b.word} />
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+function ContainerRow() {
+  const ref = useRef<HTMLDivElement>(null);
+  const reduce = useReducedMotion();
+  const { scrollYProgress } = useScroll({ target: ref, offset: ["start end", "end end"] });
+  const still = useMotionValue(1);
+  return (
+    <div ref={ref} aria-hidden="true" className="relative mt-8 h-[78px] overflow-hidden [--box-h:96px] md:h-[100px] md:[--box-h:122px]">
+      <div className="absolute left-1/2 top-0 flex -translate-x-1/2 gap-4 md:gap-5">
+        {BOXES.map((b, i) => <Box key={i} b={b} i={i} progress={reduce ? still : scrollYProgress} />)}
       </div>
     </div>
   );
