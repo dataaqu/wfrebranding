@@ -171,8 +171,9 @@ export default function FactsGlobe({ progress, reduce }: { progress: MotionValue
       // vertical: globe centre starts ~1 radius below the panel bottom, ends just below centre
       const worldPerPx = (2 * Math.tan((camera.fov * Math.PI) / 360) * dist) / h;
       // keep the globe's top touching the WEFORWARD wordmark (Facts.tsx: top 8vh, width 60vw / 82vw, viewBox 992×100)
-      const wordmarkBottom = h * 0.08 + ((w < 768 ? 0.82 : 0.6) * window.innerWidth * 100) / 992;
-      const touchPx = h / 2 - wordmarkBottom - pxRadius + 4; // centre offset from panel middle (up = +)
+      const wordmarkH = ((w < 768 ? 0.82 : 0.6) * window.innerWidth * 100) / 992;
+      const wordmarkBottom = h * 0.08 + wordmarkH;
+      const touchPx = h / 2 - wordmarkBottom - pxRadius + wordmarkH * 0.35; // tucks slightly under the letters // centre offset from panel middle (up = +)
       globe.position.y = touchPx * worldPerPx;
 
       globe.rotation.x = 0.42; // show the northern hemisphere
