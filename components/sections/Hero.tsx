@@ -18,15 +18,23 @@ export default function Hero() {
   const [zoomed, setZoomed] = useState(false);
   const collapsed = closed || minimized;
   // Remember the open window's height so the hero keeps its size when the window is closed/minimised.
+  // The video band ends `overlap` px above the hero bottom so the open window runs past it into the page.
+  // Measure it while the window is open and keep the band (and the hero's visible size) fixed when it is
+  // closed/minimised; only the white overlap strip goes away.
+  const sectionRef = useRef<HTMLElement>(null);
   const winRef = useRef<HTMLDivElement>(null);
-  const [winH, setWinH] = useState<number | undefined>(undefined);
+  const [dims, setDims] = useState<{ win: number; video: number; overlap: number } | null>(null);
   useEffect(() => {
-    const el = winRef.current;
-    if (!el || collapsed) return;
-    const update = () => setWinH(el.offsetHeight);
+    const sec = sectionRef.current, win = winRef.current;
+    if (!sec || !win || collapsed) return;
+    const mq = window.matchMedia("(min-width: 768px)");
+    const update = () => {
+      const overlap = mq.matches ? 280 : 180;
+      setDims({ win: win.offsetHeight, video: sec.offsetHeight - overlap, overlap });
+    };
     update();
     const ro = new ResizeObserver(update);
-    ro.observe(el);
+    ro.observe(sec); ro.observe(win);
     return () => ro.disconnect();
   }, [collapsed]);
   const videoDesktop = useRef<HTMLVideoElement>(null);
@@ -39,10 +47,10 @@ export default function Hero() {
     });
   }, [reduce]);
   return (
-    <section id="hero" className="relative overflow-hidden">
+    <section id="hero" ref={sectionRef} className="relative overflow-hidden">
         {/* Full-bleed hero: the port video covers header, headline and the top of the product preview;
             the preview runs on past the video into the page (Flexport-style). Navy scrim for legibility. Reduced motion: no autoplay, poster only. */}
-        <div aria-hidden="true" className={`absolute inset-x-0 top-0 overflow-hidden transition-[bottom] duration-500 ${collapsed ? "bottom-0" : "bottom-[180px] md:bottom-[280px]"}`} style={{ background: "#04042b" }}>
+        <div aria-hidden="true" className={`absolute inset-x-0 top-0 overflow-hidden ${dims ? "" : "bottom-[180px] md:bottom-[280px]"}`} style={{ background: "#04042b", height: dims?.video }}>
           <div style={{ position: "absolute", inset: 0, backgroundImage: "url('/assets/hero-port.png')", backgroundSize: "cover", backgroundPosition: "center 55%" }} />
           <video ref={videoDesktop} className="hidden md:block" src="/assets/hero-720.webm" poster="/assets/hero-port.png" muted loop playsInline autoPlay={!reduce} preload="metadata"
             style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", objectFit: "cover" }} />
@@ -110,12 +118,12 @@ export default function Hero() {
         <motion.div
           data-anim="hero-dashboard"
           className="relative z-10 mx-auto flex flex-col px-6 md:px-10"
-          style={{ minHeight: winH }}
+          style={{ minHeight: collapsed && dims ? dims.win - dims.overlap : undefined }}
           initial={reduce ? false : { opacity: 0, y: 80, maxWidth: 1152 }}
           animate={{ opacity: 1, y: 0, maxWidth: zoomed ? 1440 : 1152 }}
           transition={{ default: { duration: 1, delay: reduce ? 0 : INTRO_REVEAL_AT + 0.35, ease: EASE }, maxWidth: { duration: reduce ? 0 : 0.55, ease: EASE } }}
         >
-          <AnimatePresence mode="wait" initial={false}>
+          <AnimatePresence mode="popLayout" initial={false}>
           {closed ? (
             <motion.div
               key="dock"
