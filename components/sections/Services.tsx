@@ -1,124 +1,113 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { motion, useMotionValueEvent, useReducedMotion, useScroll } from "motion/react";
-import { chamfer, Reveal } from "@/components/brand/design-system";
+import { motion, useMotionValueEvent, useReducedMotion, useScroll, useTransform, type MotionValue } from "motion/react";
+import { Reveal } from "@/components/brand/design-system";
 import { SERVICES } from "@/data/landing";
 
 const MEDIA = ["air", "sea", "rail", "road", "customs"];
+const NAVY = "#04042b", PURPLE = "#644ff2", MUTED = "#c9c8d6";
 
-function ServiceVideo({ index, active, reduced, mobile = false }: {
-  index: number; active: boolean; reduced: boolean; mobile?: boolean;
-}) {
+// Left-edge notch of the media panel (brand chamfer, cut into the side like a docking bay).
+const NOTCH = "polygon(0 0, 100% 0, 100% 100%, 0 100%, 0 64%, 28px calc(64% - 28px), 28px calc(16% + 28px), 0 16%)";
+
+function Video({ name, active, eager }: { name: string; active: boolean; eager: boolean }) {
   const ref = useRef<HTMLVideoElement>(null);
-  const [nearby, setNearby] = useState(!mobile);
-  const [loaded, setLoaded] = useState(!mobile);
   useEffect(() => {
-    if (!mobile || !ref.current) return;
-    const observer = new IntersectionObserver(([entry]) => {
-      setNearby(entry.isIntersecting);
-      if (entry.isIntersecting) setLoaded(true);
-    });
-    observer.observe(ref.current);
-    return () => observer.disconnect();
-  }, [mobile]);
-  useEffect(() => {
-    if (loaded) ref.current?.load();
-  }, [loaded]);
-  useEffect(() => {
-    const video = ref.current;
-    if (!video) return;
-    video.muted = true;
-    if (loaded && active && nearby && !reduced) void video.play().catch(() => {});
-    else video.pause();
-  }, [active, nearby, reduced, loaded]);
-  return <video ref={ref} data-service-video={MEDIA[index]} muted loop playsInline
-    autoPlay={active && nearby && !reduced} preload={active && nearby ? "auto" : "metadata"}
-    poster={`/assets/services/${MEDIA[index]}.jpg`}
-    aria-label={`${SERVICES[index].title} aerial view`}
-    className="h-full w-full object-cover">
-    {loaded && <>
-      <source src={`/assets/services/${MEDIA[index]}.webm`} type="video/webm" />
-      <source src={`/assets/services/${MEDIA[index]}.mp4`} type="video/mp4" />
-    </>}
-  </video>;
+    const v = ref.current;
+    if (!v) return;
+    if (active) void v.play().catch(() => {});
+    else v.pause();
+  }, [active]);
+  return (
+    <video ref={ref} muted loop playsInline preload={eager ? "auto" : "metadata"}
+      poster={`/assets/services/${name}.jpg`} aria-hidden="true" className="h-full w-full object-cover">
+      <source src={`/assets/services/${name}.webm`} type="video/webm" />
+      <source src={`/assets/services/${name}.mp4`} type="video/mp4" />
+    </video>
+  );
+}
+
+// One word whose colour follows scroll: muted → purple (leading edge) → navy.
+function Word({ children, progress, start, end }: { children: string; progress: MotionValue<number>; start: number; end: number }) {
+  const color = useTransform(progress, [start, end, Math.min(1, end + 0.18)], [MUTED, PURPLE, NAVY]);
+  return <motion.span style={{ color }}>{children} </motion.span>;
+}
+
+function Step({ index }: { index: number }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const reduce = useReducedMotion();
+  const s = SERVICES[index];
+  const { scrollYProgress } = useScroll({ target: ref, offset: ["start 0.8", "center 0.45"] });
+  const headColor = useTransform(scrollYProgress, [0, 0.12, 0.3], [MUTED, PURPLE, NAVY]);
+  const words = s.text.split(" ");
+
+  return (
+    <div ref={ref} className="relative flex min-h-svh flex-col justify-center py-24">
+      <motion.h3 className="text-[clamp(1.5rem,2.3vw,2.25rem)] font-medium leading-tight tracking-tight" style={{ color: reduce ? NAVY : headColor }}>
+        {s.title}
+      </motion.h3>
+      <div className="relative mt-10">
+        <span aria-hidden="true" className="absolute -left-10 top-1/2 font-mono text-[10px] text-[#9a99ad]">0{index + 1}</span>
+        <p className="max-w-[460px] text-[clamp(1.6rem,2.5vw,2.4rem)] leading-[1.18] tracking-tight" style={{ color: NAVY }}>
+          {reduce ? s.text : words.map((w, i) => (
+            <Word key={i} progress={scrollYProgress} start={0.15 + (i / words.length) * 0.6} end={0.15 + ((i + 1) / words.length) * 0.6}>{w}</Word>
+          ))}
+        </p>
+      </div>
+    </div>
+  );
 }
 
 export default function Services() {
-  const scene = useRef<HTMLDivElement>(null);
-  const [activeIndex, setActiveIndex] = useState(0);
-  const [desktop, setDesktop] = useState(false);
-  const reduce = !!useReducedMotion();
-  const { scrollYProgress } = useScroll({ target: scene, offset: ["start start", "end end"] });
-  useMotionValueEvent(scrollYProgress, "change", (progress) => {
-    setActiveIndex(Math.min(SERVICES.length - 1, Math.max(0, Math.floor(progress * SERVICES.length))));
-  });
-  useEffect(() => {
-    const media = window.matchMedia("(min-width: 1024px)");
-    const update = () => setDesktop(media.matches);
-    update();
-    media.addEventListener("change", update);
-    return () => media.removeEventListener("change", update);
-  }, []);
-  function selectService(index: number) {
-    const element = scene.current;
-    if (!element) return;
-    const top = element.getBoundingClientRect().top + window.scrollY;
-    const segment = (element.offsetHeight - window.innerHeight) / SERVICES.length;
-    window.scrollTo({ top: top + segment * (index + 0.5), behavior: reduce ? "instant" : "smooth" });
-  }
+  const [active, setActive] = useState(0);
+  const steps = useRef<HTMLDivElement>(null);
+  // Active step = the one crossing the viewport centre; derived from scroll so jumps never leave it stale.
+  const { scrollYProgress } = useScroll({ target: steps, offset: ["start center", "end center"] });
+  useMotionValueEvent(scrollYProgress, "change", (v) => setActive(Math.min(MEDIA.length - 1, Math.max(0, Math.floor(v * MEDIA.length)))));
+
   return (
-    <section id="services" className="bg-white pb-24">
+    <section id="services" className="bg-white pb-24 pt-8">
       <div className="mx-auto flex max-w-6xl flex-wrap items-end justify-between gap-6 px-6 md:px-10">
         <Reveal id="services-head">
           <h2 className="sr-only">Every mode. One partner.</h2>
-          <div aria-hidden="true"><div className="wf-head text-4xl text-[#644ff2] md:text-6xl">Every mode.</div><div className="wf-head text-4xl text-[#04042b] md:text-6xl">One partner.</div></div>
+          <div aria-hidden="true"><div className="wf-head text-4xl md:text-6xl" style={{ color: PURPLE }}>Every mode.</div><div className="wf-head text-4xl md:text-6xl" style={{ color: NAVY }}>One partner.</div></div>
         </Reveal>
         <p className="max-w-sm text-sm leading-6 text-[#4b4b66]">Air, sea, rail, road and customs handled by one team, so your cargo never falls between two providers.</p>
       </div>
 
-      <div ref={scene} data-services-scene className="relative mt-12 hidden h-[600svh] lg:block">
-        <div className="sticky top-0 flex h-svh items-center">
-          <div className="mx-auto grid w-full max-w-[1440px] grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] items-center gap-12 px-10 xl:gap-16 xl:px-16">
-            <div aria-label="Freight services">
-              {SERVICES.map((service, index) => {
-                const active = index === activeIndex;
-                return <div key={service.title} className="border-t border-[#04042b]/15 py-5">
-                  <h3><button type="button" onClick={() => selectService(index)}
-                    aria-current={active ? "step" : undefined} aria-expanded={active}
-                    aria-controls={`service-description-${index}`}
-                    className={`group flex w-full items-start gap-5 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#644ff2] ${active ? "text-[#04042b]" : "text-[#04042b]/40 hover:text-[#04042b]/70"}`}>
-                    <span className={`mt-1 font-mono text-xs ${active ? "text-[#644ff2]" : ""}`}>0{index + 1}</span>
-                    <span className="wf-head text-[clamp(1.35rem,2.1vw,2rem)]">{service.title}</span>
-                  </button></h3>
-                  <p id={`service-description-${index}`} hidden={!active} className="ml-9 mt-4 max-w-[340px] text-sm leading-6 text-[#4b4b66]">{service.text}</p>
-                </div>;
-              })}
-            </div>
-            <div data-services-media className="relative h-[min(72svh,720px)] overflow-hidden bg-[#f8f7ff]" style={chamfer(64, "bl")}>
-              {SERVICES.map((service, index) => <motion.div key={service.title}
-                aria-hidden={index !== activeIndex} initial={false}
-                animate={{ opacity: index === activeIndex ? 1 : 0 }} transition={{ duration: reduce ? 0 : 0.45 }}
-                className="absolute inset-0">
-                {desktop && <ServiceVideo index={index} active={index === activeIndex} reduced={reduce} />}
-              </motion.div>)}
-              <span aria-hidden="true" className="absolute right-6 top-6 bg-[#d5f476] px-3 py-2 font-mono text-xs text-[#04042b]">0{activeIndex + 1} / 05</span>
-            </div>
+      {/* Desktop: scrolling steps left, sticky notched video right */}
+      <div className="mx-auto mt-8 hidden max-w-[1440px] grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] gap-16 px-10 lg:grid xl:px-16">
+        <div ref={steps} className="pl-20 xl:pl-28">
+          {SERVICES.map((s, i) => <Step key={s.title} index={i} />)}
+        </div>
+        <div className="relative">
+          <div className="sticky top-[6svh] h-[88svh] overflow-hidden rounded-lg bg-[#0b0b1f]" style={{ clipPath: NOTCH }}>
+            {MEDIA.map((name, i) => (
+              <motion.div key={name} className="absolute inset-0" initial={false}
+                animate={{ opacity: i === active ? 1 : 0 }} transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}>
+                <Video name={name} active={i === active} eager={Math.abs(i - active) <= 1} />
+              </motion.div>
+            ))}
           </div>
         </div>
       </div>
 
-      <div className="mx-auto mt-12 max-w-6xl space-y-12 px-6 md:px-10 lg:hidden">
-        {SERVICES.map((service, index) => <article key={service.title}>
-          <div className="mb-5 border-t border-[#04042b]/15 pt-5">
-            <span className="font-mono text-xs text-[#644ff2]">0{index + 1}</span>
-            <h3 className="wf-head mt-3 text-2xl text-[#04042b]">{service.title}</h3>
-            <p className="mt-4 max-w-md text-sm leading-6 text-[#4b4b66]">{service.text}</p>
-          </div>
-          <div className="aspect-[4/3] overflow-hidden bg-[#f8f7ff]" style={chamfer(36, "bl")}>
-            {!desktop && <ServiceVideo index={index} active reduced={reduce} mobile />}
-          </div>
-        </article>)}
+      {/* Mobile: stacked */}
+      <div className="mx-auto mt-12 max-w-6xl space-y-14 px-6 md:px-10 lg:hidden">
+        {SERVICES.map((s, i) => (
+          <article key={s.title}>
+            <span className="font-mono text-[10px] text-[#9a99ad]">0{i + 1}</span>
+            <h3 className="mt-2 text-2xl font-medium tracking-tight" style={{ color: NAVY }}>{s.title}</h3>
+            <p className="mt-4 text-xl leading-snug tracking-tight" style={{ color: NAVY }}>{s.text}</p>
+            <div className="mt-6 aspect-[4/5] overflow-hidden rounded-lg bg-[#0b0b1f]" style={{ clipPath: NOTCH }}>
+              <video muted loop playsInline autoPlay preload="none" poster={`/assets/services/${MEDIA[i]}.jpg`} aria-hidden="true" className="h-full w-full object-cover">
+                <source src={`/assets/services/${MEDIA[i]}.webm`} type="video/webm" />
+                <source src={`/assets/services/${MEDIA[i]}.mp4`} type="video/mp4" />
+              </video>
+            </div>
+          </article>
+        ))}
       </div>
     </section>
   );
