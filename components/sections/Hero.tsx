@@ -31,7 +31,7 @@ export default function Hero() {
     });
   }, [reduce]);
   return (
-    <section id="hero" className={`relative overflow-hidden ${collapsed ? "min-h-[90svh]" : ""}`}>
+    <section id="hero" className={`relative z-20 overflow-hidden ${collapsed ? "min-h-[90svh]" : ""}`}>
         {/* Full-bleed hero: the port video covers header, headline and the top of the product preview;
             the preview runs on past the video into the page (Flexport-style). Navy scrim for legibility. Reduced motion: no autoplay, poster only. */}
         <div aria-hidden="true" className={`absolute inset-x-0 top-0 overflow-hidden ${collapsed ? "bottom-0" : "bottom-[180px] md:bottom-[280px]"}`} style={{ background: "#04042b", ...chamfer(72, "br") }}>
