@@ -162,16 +162,16 @@ export default function FactsGlobe({ progress, reduce }: { progress: MotionValue
 
       // fit: radius in screen ~ 0.36 of min(w,h) at the end, ~1.1 of width at the start
       const k = easeOut(range(p, 0.05, 0.7));
-      const fitEnd = 0.34 * Math.min(w, h * 1.15);
-      const fitStart = Math.min((w < 768 ? 0.62 : 0.37) * w, 0.8 * h); // Emons-like start: moderate globe under the figures
+      const fitEnd = 0.29 * Math.min(w, h * 1.15);
+      const fitStart = Math.min((w < 768 ? 0.55 : 0.32) * w, 0.7 * h); // Emons-like start: moderate globe under the figures
       const pxRadius = lerp(fitStart, fitEnd, k);
       const dist = (R * h) / (2 * Math.tan((camera.fov * Math.PI) / 360) * pxRadius);
       camera.position.set(0, 0, dist);
       camera.lookAt(0, 0, 0);
       // vertical: globe centre starts ~1 radius below the panel bottom, ends just below centre
       const worldPerPx = (2 * Math.tan((camera.fov * Math.PI) / 360) * dist) / h;
-      const yStartPx = h * 0.18 - pxRadius; // globe top just under the WEFORWARD wordmark
-      const yEndPx = 0;
+      const yStartPx = h * 0.05 - pxRadius; // globe top just under the WEFORWARD wordmark
+      const yEndPx = -h * 0.08;
       globe.position.y = lerp(yStartPx, yEndPx, k) * worldPerPx;
 
       globe.rotation.x = 0.42; // show the northern hemisphere
