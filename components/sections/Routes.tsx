@@ -1,7 +1,7 @@
 "use client";
 
 import { cloneElement, memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { Reveal, IconPlane, IconShip, IconTrain, IconTruck } from "@/components/brand/design-system";
+import { Reveal, chamfer, IconPlane, IconShip, IconTrain, IconTruck } from "@/components/brand/design-system";
 import { L, loadRoutesEngine, project, type CountryShape, type Leg, type Place, type Region, type Route, type RoutesEngine } from "@/lib/routes-engine";
 
 /* Route explorer — 1:1 behavioural port of weforward-brand-concept #route-explorer
@@ -460,8 +460,16 @@ export default function Routes() {
   const caption = L(route.notice || route.serviceNote) || (route.mode === "sea" || route.mode === "air" ? "Choose on the map or search any country." : "Search available overland corridors.");
   const motionLabel = playing ? "Pause world animation" : "Play world animation";
 
+  /* ---------- presentational tokens ---------- */
+  const PRESS = "transition-[transform,background-color,color,box-shadow] duration-150 ease-out active:scale-[0.97]";
+  const LABEL = "wf-sub block text-[10px] font-bold tracking-[0.08em]";
+  const FIELD = "min-h-12 w-full appearance-none bg-[#f3f2fd] px-4 text-sm outline-none ring-1 ring-inset ring-transparent transition-[box-shadow,background-color] duration-150 focus:bg-white focus:ring-brand-500";
+  const SURFACE = "shadow-[0_1px_0_rgba(4,4,43,0.04),0_24px_60px_-32px_rgba(4,4,43,0.22)]";
+  const Caret = () => <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2" style={{ color: PURPLE }}>{I.caret}</span>;
+  const pct = Math.round(((legIndex + 1) / route.legs.length) * 100);
+
   return (
-    <section id="routes" className="relative py-24" style={{ background: "#f8f7ff", color: INK }}>
+    <section id="routes" className="relative pb-24 pt-4 md:pt-6" style={{ background: "#f8f7ff", color: INK }}>
       {/* rounded transition: a dome of the section colour rising behind the globe (Facts sits on a higher layer) */}
       <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 bottom-full h-[22vw] overflow-hidden">
         <div className="absolute left-1/2 top-0 h-[60vw] w-[125vw] -translate-x-1/2 rounded-[50%]" style={{ background: "#f8f7ff" }} />
@@ -469,33 +477,40 @@ export default function Routes() {
       <div className="mx-auto max-w-6xl px-6 md:px-10">
         <div className="flex flex-wrap items-end justify-between gap-6">
           <Reveal id="routes-head">
+            <p className={LABEL} style={{ color: PURPLE }}>Routes / Road · Sea · Rail · Air</p>
             <h2 className="sr-only">Your route. In focus.</h2>
-            <div aria-hidden="true">
+            <div aria-hidden="true" className="mt-4">
               <div className="wf-head text-5xl md:text-7xl" style={{ color: INK }}>Your route.</div>
               <div className="wf-head text-5xl md:text-7xl" style={{ color: PURPLE }}>In focus.</div>
             </div>
           </Reveal>
-          <p className="max-w-xs text-base leading-7" style={{ color: "#4b4b66" }}>Choose a country. Explore the connections. See every stage.</p>
+          <p className="max-w-[17rem] text-[15px] leading-7" style={{ color: "#4b4b66" }}>Choose a country. Explore the connections. See every stage.</p>
         </div>
 
-        <div className="mt-12 grid gap-6 lg:grid-cols-[1fr_1.05fr]">
+        <div className="mt-10 grid items-start gap-5 lg:grid-cols-[1fr_1.02fr]">
           {/* ================= scene: map + modes + consolidation strip ================= */}
-          <div className="min-w-0">
-            {expanded && <div className="fixed inset-0 z-[65] bg-ink-950/40" onClick={() => setExpanded(false)} aria-hidden="true" />}
-            <div ref={worldRef} data-mode={route.mode} className={`relative flex flex-col overflow-hidden border border-brand-100 ${expanded ? "fixed inset-3 z-[70] md:inset-8" : "h-[560px] md:h-[640px]"}`} style={{ background: "#f8f7ff" }}>
-              <div className="relative z-10 flex items-center justify-between px-5 py-4">
-                <p className="wf-sub flex items-center gap-2 text-[10px] font-bold" style={{ color: "#373650" }}>
-                  <span className="inline-block h-1.5 w-1.5 rounded-full" style={{ background: LIME, boxShadow: `0 0 0 3px ${LIME}55` }} /> Connected to Georgia
+          <div className="min-w-0 lg:sticky lg:top-6">
+            {expanded && <div className="fixed inset-0 z-[65] bg-ink-950/40 backdrop-blur-[2px]" onClick={() => setExpanded(false)} aria-hidden="true" />}
+            <div ref={worldRef} data-mode={route.mode} className={`relative flex flex-col overflow-hidden ${SURFACE} ${expanded ? "fixed inset-3 z-[70] md:inset-8" : "h-[540px] md:h-[600px]"}`} style={{ background: "#f1effd", ...chamfer(28, "tr") }}>
+              {/* top bar: status + map tools grouped */}
+              <div className="absolute inset-x-0 top-0 z-10 flex items-center justify-between p-4">
+                <p className="wf-sub flex items-center gap-2 rounded-full bg-white/80 px-3 py-1.5 text-[9px] font-bold backdrop-blur" style={{ color: "#373650" }}>
+                  <span className="relative inline-flex h-1.5 w-1.5">
+                    <span className="absolute inset-0 animate-ping rounded-full motion-reduce:hidden" style={{ background: LIME }} />
+                    <span className="relative h-1.5 w-1.5 rounded-full" style={{ background: "#9dc22a" }} />
+                  </span>
+                  Connected to Georgia
                 </p>
-                <div className="flex gap-2">
+                <div className="flex items-center gap-0.5 bg-white/90 p-1 backdrop-blur" style={chamfer(8, "br")}>
                   {([["focus", I.pin, "Focus route"], ["world", I.globe, "World view"]] as const).map(([v, icon, label]) => (
                     <button key={v} type="button" aria-pressed={view === v} aria-label={label} title={label}
                       onClick={() => { animateNext.current = true; setView(v); setFocused(null); writeURL(route, v); }}
-                      className="inline-flex h-10 w-10 items-center justify-center border transition-colors"
-                      style={view === v ? { background: PURPLE, borderColor: PURPLE, color: "#fff" } : { background: "#fff", borderColor: "#e4e1ff", color: INK }}>{icon}</button>
+                      className={`inline-flex h-8 w-8 items-center justify-center ${PRESS}`}
+                      style={view === v ? { background: INK, color: LIME } : { color: INK }}>{icon}</button>
                   ))}
+                  <span className="mx-0.5 h-4 w-px" style={{ background: "#e4e1ff" }} />
                   <button ref={expandRef} type="button" aria-label={expanded ? "Close expanded map" : "Expand map"} title={expanded ? "Close expanded map" : "Expand map"} aria-expanded={expanded}
-                    onClick={() => setExpanded((x) => !x)} className="inline-flex h-10 w-10 items-center justify-center border transition-colors" style={{ background: "#fff", borderColor: "#e4e1ff", color: INK }}>{expanded ? I.close : I.expand}</button>
+                    onClick={() => setExpanded((x) => !x)} className={`inline-flex h-8 w-8 items-center justify-center ${PRESS}`} style={{ color: INK }}>{expanded ? I.close : I.expand}</button>
                 </div>
               </div>
               <div ref={mapBoxRef} className="relative min-h-0 flex-1">
@@ -568,61 +583,66 @@ export default function Routes() {
                     );
                   })}
                 </svg>
-                {view === "world" && <p className="pointer-events-none absolute inset-x-0 bottom-2 text-center text-[11px]" style={{ color: "#373650" }}>Select a country to explore routes</p>}
+                {view === "world" && <p className="wf-sub pointer-events-none absolute inset-x-0 bottom-24 text-center text-[9px] font-bold" style={{ color: "#686879" }}>Select a country to explore routes</p>}
               </div>
-              <div className="relative z-10 m-3 flex items-center gap-4 border border-brand-100 bg-white px-4 py-3">
-                <span style={{ color: INK }}>{modeIcon(leg.mode, "h-6 w-6")}</span>
+              {/* route preview: floating chip with leg progress */}
+              <div className="absolute inset-x-3 bottom-3 z-10 flex items-center gap-3 bg-white/90 px-4 py-3 backdrop-blur" style={chamfer(14, "br")}>
+                <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center" style={{ background: INK, color: LIME }}>{modeIcon(leg.mode, "h-5 w-5")}</span>
                 <div className="min-w-0 flex-1">
-                  <p className="wf-sub text-[9px] font-bold" style={{ color: "#686879" }}>Route preview</p>
-                  <strong data-leg-name className="block truncate text-sm" style={{ color: INK }}>{first(leg.from)} — {first(leg.to)}</strong>
+                  <p className={LABEL} style={{ color: "#686879" }}>Route preview</p>
+                  <strong data-leg-name className="mt-0.5 block truncate text-sm font-semibold" style={{ color: INK }}>{first(leg.from)} — {first(leg.to)}</strong>
                 </div>
-                <span className="text-xs tabular-nums" style={{ color: "#4b4b66" }}>{String(legIndex + 1).padStart(2, "0")} / {String(route.legs.length).padStart(2, "0")}</span>
+                <span className="text-xs tabular-nums" style={{ color: "#4b4b66" }}><b style={{ color: INK }}>{String(legIndex + 1).padStart(2, "0")}</b> / {String(route.legs.length).padStart(2, "0")}</span>
+                <span aria-hidden="true" className="absolute inset-x-0 bottom-0 h-[2px] origin-left transition-transform duration-300 ease-out" style={{ background: PURPLE, transform: `scaleX(${pct / 100})` }} />
               </div>
             </div>
 
-            <div className="mt-3 grid grid-cols-[repeat(4,minmax(0,1fr))_auto] gap-2">
-              {MODES.map((m) => {
-                const on = route.mode === m.key;
-                return (
-                  <button key={m.key} type="button" aria-pressed={on} onClick={() => selectMode(m.key)}
-                    className="flex min-h-[64px] items-center gap-2.5 border px-3 text-left transition-colors"
-                    style={on ? { background: PURPLE, borderColor: PURPLE, color: "#fff" } : { background: "#fff", borderColor: "#e4e1ff", color: INK }}>
-                    <m.Icon className="h-5 w-5 shrink-0" />
-                    <span className="hidden min-w-0 sm:block">
-                      <span className="block text-xs font-bold">{m.label}</span>
-                      <small className="block text-[10px] leading-tight opacity-80">{m.sub}</small>
-                    </span>
-                  </button>
-                );
-              })}
+            {/* transport modes: one bar */}
+            <div className={`mt-3 flex items-stretch bg-white p-1 ${SURFACE}`} style={chamfer(14, "br")}>
+              <div className="grid flex-1 grid-cols-4 gap-1">
+                {MODES.map((m) => {
+                  const on = route.mode === m.key;
+                  return (
+                    <button key={m.key} type="button" aria-pressed={on} onClick={() => selectMode(m.key)}
+                      className={`relative flex min-h-[56px] items-center justify-center gap-2.5 px-2 text-left sm:justify-start sm:px-3 ${PRESS} ${on ? "" : "[@media(hover:hover)]:hover:bg-[#f3f2fd]"}`}
+                      style={on ? { background: INK, color: "#fff" } : { color: INK }}>
+                      <span style={{ color: on ? LIME : PURPLE }}><m.Icon className="h-5 w-5 shrink-0" /></span>
+                      <span className="hidden min-w-0 sm:block">
+                        <span className="block text-xs font-semibold">{m.label}</span>
+                        <small className="block truncate text-[10px] leading-tight opacity-70">{m.sub}</small>
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+              <span className="mx-1 w-px self-stretch" style={{ background: "#ecebf8" }} />
               <button type="button" aria-pressed={playing} aria-label={motionLabel} onClick={() => setPaused((p) => !p)}
-                className="inline-flex min-h-[64px] w-14 items-center justify-center border transition-colors" style={{ background: "#fff", borderColor: "#e4e1ff", color: PURPLE }}>
+                className={`inline-flex w-12 items-center justify-center ${PRESS} [@media(hover:hover)]:hover:bg-[#f3f2fd]`} style={{ color: PURPLE }}>
                 {playing ? I.pause : I.play}
               </button>
             </div>
 
             {warehouses.length > 0 && (
-              <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border border-brand-100 bg-white px-4 py-3">
-                <span className="text-xs" style={{ color: "#4b4b66" }}>Consolidation stops</span>
-                <div className="flex flex-wrap gap-2">
-                  {warehouses.map(({ s, i }) => (
-                    <button key={i} type="button" onClick={() => { focusRouteStop(i); scrollToMap(); }} className="inline-flex items-center gap-2 border border-brand-100 px-3 py-2 text-xs font-bold transition-colors hover:border-brand-500" style={{ color: INK }}>
-                      {I.warehouse}<span>{first(s)}</span><span style={{ color: PURPLE }}>{I.zoom}</span>
-                    </button>
-                  ))}
-                </div>
+              <div className="mt-3 flex flex-wrap items-center gap-3 px-1">
+                <span className={LABEL} style={{ color: "#686879" }}>Consolidation stops</span>
+                {warehouses.map(({ s, i }) => (
+                  <button key={i} type="button" onClick={() => { focusRouteStop(i); scrollToMap(); }}
+                    className={`inline-flex items-center gap-2 bg-white px-3 py-2 text-xs font-semibold ${PRESS} ${SURFACE}`} style={{ color: INK, ...chamfer(8, "br") }}>
+                    <span style={{ color: PURPLE }}>{I.warehouse}</span><span>{first(s)}</span><span style={{ color: "#a99bff" }}>{I.zoom}</span>
+                  </button>
+                ))}
               </div>
             )}
           </div>
 
           {/* ================= route-console ================= */}
-          <section id="route-explorer" aria-labelledby="route-title" className="min-w-0 border border-brand-100 bg-white p-6 md:p-8">
-            <p className="wf-sub text-[10px] font-bold" style={{ color: PURPLE }}>Explore your route</p>
-            <h3 id="route-title" className="mt-2 text-3xl font-bold tracking-tight" style={{ color: INK }}>{A(L(route.title))}</h3>
+          <section id="route-explorer" aria-labelledby="route-title" className={`min-w-0 bg-white p-6 md:p-9 ${SURFACE}`} style={chamfer(28, "tr")}>
+            <p className={LABEL} style={{ color: PURPLE }}>Explore your route</p>
+            <h3 id="route-title" className="mt-3 text-[28px] leading-tight md:text-[34px]" style={{ color: INK, fontFamily: '"Loos Wide", Inter, sans-serif', fontWeight: 500, letterSpacing: "-0.02em" }}>{A(L(route.title))}</h3>
 
-            <div ref={searchRef} className="relative mt-4">
-              <label htmlFor="route-country-search" className="text-sm" style={{ color: "#373650" }}>{route.options.direction === "export" ? "Where are we delivering?" : "Where are we starting?"}</label>
-              <div className="mt-2 flex items-center gap-3 border border-brand-100 px-4 focus-within:border-brand-500" style={{ color: "#686879" }}>
+            <div ref={searchRef} className="relative mt-7">
+              <label htmlFor="route-country-search" className={LABEL} style={{ color: "#686879" }}>{route.options.direction === "export" ? "Where are we delivering?" : "Where are we starting?"}</label>
+              <div className="relative mt-2.5 flex items-center gap-3 bg-[#f3f2fd] px-4 ring-1 ring-inset ring-transparent transition-[box-shadow,background-color] duration-150 focus-within:bg-white focus-within:ring-brand-500" style={{ color: "#686879" }}>
                 {I.search}
                 <input id="route-country-search" ref={inputRef} type="search" autoComplete="off" role="combobox" aria-autocomplete="list" aria-expanded={listOpen} aria-controls="route-country-results"
                   aria-activedescendant={listOpen && active >= 0 ? `country-result-${active}` : undefined} placeholder="Search a country…" value={query}
@@ -640,58 +660,68 @@ export default function Routes() {
                     }
                     if (e.key === "Enter" && filtered.length) { e.preventDefault(); chooseCountry(filtered[Math.max(0, active)].id); }
                   }}
-                  className="min-h-12 w-full bg-transparent text-sm outline-none [&::-webkit-search-cancel-button]:hidden" style={{ color: INK }} />
-                <button type="button" aria-label="Clear search" onClick={() => { setQuery(""); inputRef.current?.focus(); setListOpen(true); setActive(-1); }} style={{ color: PURPLE }}>{I.close}</button>
+                  className="min-h-12 w-full bg-transparent text-sm outline-none placeholder:text-[#9a99b3] [&::-webkit-search-cancel-button]:hidden" style={{ color: INK }} />
+                <button type="button" aria-label="Clear search" onClick={() => { setQuery(""); inputRef.current?.focus(); setListOpen(true); setActive(-1); }} className={`inline-flex h-7 w-7 items-center justify-center ${PRESS} ${query ? "opacity-100" : "pointer-events-none opacity-0"}`} style={{ color: PURPLE }}>{I.close}</button>
               </div>
-              <div id="route-country-results" role="listbox" hidden={!listOpen} className="absolute inset-x-0 top-full z-20 mt-1 max-h-72 overflow-auto border border-brand-100 bg-white shadow-lg">
+              <div id="route-country-results" role="listbox" hidden={!listOpen}
+                className="absolute inset-x-0 top-full z-20 mt-2 max-h-72 origin-top overflow-auto bg-white py-1 shadow-[0_24px_48px_-16px_rgba(4,4,43,0.28)] ring-1 ring-[#ecebf8] transition-[opacity,transform] duration-150 ease-out [@starting-style]:scale-[0.98] [@starting-style]:opacity-0">
                 {filtered.length ? filtered.map((c, i) => (
                   <button key={c.id} id={`country-result-${i}`} type="button" role="option" aria-selected={i === active} onClick={() => chooseCountry(c.id)}
-                    className="flex w-full items-center justify-between gap-3 px-4 py-2.5 text-left text-sm hover:bg-brand-50" style={{ color: INK, background: i === active ? "#f1efff" : undefined }}>
-                    <span className="flex items-center gap-3"><span aria-hidden="true">{engine.flag(c.id)}</span>{L(c.label)}</span><span style={{ color: PURPLE }}>{I.arrowUR}</span>
+                    className="group flex w-full items-center justify-between gap-3 px-4 py-2.5 text-left text-sm [@media(hover:hover)]:hover:bg-[#f3f2fd]" style={{ color: INK, background: i === active ? "#f1efff" : undefined }}>
+                    <span className="flex items-center gap-3"><span aria-hidden="true" className="text-base">{engine.flag(c.id)}</span>{L(c.label)}</span>
+                    <span className="opacity-40 transition-opacity duration-150 group-hover:opacity-100" style={{ color: PURPLE }}>{I.arrowUR}</span>
                   </button>
                 )) : <p className="px-4 py-3 text-sm" style={{ color: "#686879" }}>No matching country</p>}
               </div>
-              <p data-caption className="mt-2 text-xs" style={{ color: "#686879" }}>{A(caption)}</p>
+              <p data-caption className="mt-2.5 text-xs leading-5" style={{ color: "#686879" }}>{A(caption)}</p>
             </div>
 
             {route.mode === "air" && (
-              <div className="mt-4 flex items-center gap-3 border border-brand-100 px-4 py-3" style={{ background: "#f8f7ff" }}>
-                <span style={{ color: PURPLE }}><IconPlane className="h-5 w-5" /></span>
-                <div><strong className="wf-sub block text-[10px]" style={{ color: INK }}>Worldwide coverage</strong><span className="text-xs" style={{ color: "#4b4b66" }}>To and from Georgia</span></div>
+              <div className="mt-5 flex items-center gap-3 px-4 py-3" style={{ background: INK, ...chamfer(12, "br") }}>
+                <span style={{ color: LIME }}><IconPlane className="h-5 w-5" /></span>
+                <div><strong className="wf-sub block text-[10px]" style={{ color: "#fff" }}>Worldwide coverage</strong><span className="text-xs" style={{ color: "#c9c5ff" }}>To and from Georgia</span></div>
               </div>
             )}
 
-            <details className="group mt-5 border-y border-brand-100">
-              <summary className="flex cursor-pointer list-none items-center justify-between py-4 text-sm font-bold [&::-webkit-details-marker]:hidden" style={{ color: INK }}>
-                <span>Browse regions & corridors</span><span className="transition-transform group-open:rotate-180" style={{ color: PURPLE }}>{I.caret}</span>
+            <details className="group/regions mt-6 border-y" style={{ borderColor: "#ecebf8" }}>
+              <summary className="flex cursor-pointer list-none items-center justify-between py-4 [&::-webkit-details-marker]:hidden">
+                <span className={LABEL} style={{ color: INK }}>Browse regions & corridors</span>
+                <span className="transition-transform duration-200 ease-out group-open/regions:rotate-180" style={{ color: PURPLE }}>{I.caret}</span>
               </summary>
-              <div role="group" aria-label="Select a country or region" className="flex flex-wrap gap-2 pb-4">
+              <div role="group" aria-label="Select a country or region" className="flex flex-wrap gap-1.5 pb-5">
                 {regionButtons.map((r) => (
-                  <button key={r.id} type="button" aria-pressed={r.id === region} onClick={() => { selectRegion(r.id); scrollToMap(); }} className="rounded-full border px-3 py-1.5 text-xs transition-colors"
-                    style={r.id === region ? { background: PURPLE, borderColor: PURPLE, color: "#fff" } : { borderColor: "#e4e1ff", color: INK }}>
-                    {L(r.label)}{r.transit && route.mode !== "air" ? <small className="ml-1 opacity-70">Transit</small> : null}
+                  <button key={r.id} type="button" aria-pressed={r.id === region} onClick={() => { selectRegion(r.id); scrollToMap(); }}
+                    className={`rounded-full px-3 py-1.5 text-xs ${PRESS} ${r.id === region ? "" : "[@media(hover:hover)]:hover:bg-[#e9e6fc]"}`}
+                    style={r.id === region ? { background: INK, color: "#fff" } : { background: "#f3f2fd", color: INK }}>
+                    {L(r.label)}{r.transit && route.mode !== "air" ? <small className="ml-1 opacity-60">Transit</small> : null}
                   </button>
                 ))}
               </div>
             </details>
 
-            <label className="mt-5 block text-sm" style={{ color: "#373650" }}>Choose a corridor
-              <select id="route-family" value={route.id} onChange={(e) => selectRoute(e.target.value)} className="mt-2 min-h-12 w-full border border-brand-100 bg-white px-4 text-sm outline-none focus:border-brand-500" style={{ color: INK }}>
-                {engine.families.filter((f) => f.mode === route.mode).map((f) => <option key={f.id} value={f.id}>{L(f.label)}</option>)}
-              </select>
+            <label className="mt-6 block">
+              <span className={LABEL} style={{ color: "#686879" }}>Choose a corridor</span>
+              <span className="relative mt-2.5 block">
+                <select id="route-family" value={route.id} onChange={(e) => selectRoute(e.target.value)} className={`${FIELD} pr-10 font-semibold`} style={{ color: INK }}>
+                  {engine.families.filter((f) => f.mode === route.mode).map((f) => <option key={f.id} value={f.id}>{L(f.label)}</option>)}
+                </select>
+                <Caret />
+              </span>
             </label>
+
             {segFields.length > 0 && (
-              <div className="mt-5 flex flex-wrap gap-x-6 gap-y-4">
+              <div className="mt-6 flex flex-wrap gap-x-5 gap-y-5">
                 {segFields.map((f) => (
-                  <fieldset key={f.key}>
-                    <legend className="text-sm" style={{ color: "#373650" }}>{L(f.label)}</legend>
-                    <div role="group" aria-label={L(f.label)} className="mt-2 inline-flex flex-wrap gap-1 border border-brand-100 p-1">
+                  <fieldset key={f.key} className="min-w-0">
+                    <legend className={LABEL} style={{ color: "#686879" }}>{L(f.label)}</legend>
+                    <div role="group" aria-label={L(f.label)} className="mt-2.5 inline-flex flex-wrap gap-1 bg-[#f3f2fd] p-1">
                       {f.options.map((o) => {
                         const on = route.options[f.key] === o.id;
                         return (
-                          <button key={o.id} type="button" aria-pressed={on} onClick={() => setOption(f.key, o.id)} className="px-4 py-2.5 text-xs transition-colors"
-                            style={f.key === "load" && on ? { background: LIME, color: INK } : on ? { background: PURPLE, color: "#fff" } : { color: "#4b4b66" }}>
-                            <strong className="font-normal">{A(L(o.label))}</strong>{o.description && <small className="block">{A(L(o.description))}</small>}
+                          <button key={o.id} type="button" aria-pressed={on} onClick={() => setOption(f.key, o.id)}
+                            className={`px-4 py-2.5 text-xs ${PRESS}`}
+                            style={f.key === "load" && on ? { background: LIME, color: INK, boxShadow: "0 1px 2px rgba(4,4,43,0.12)" } : on ? { background: INK, color: "#fff" } : { color: "#4b4b66" }}>
+                            <strong className={on ? "font-semibold" : "font-normal"}>{A(L(o.label))}</strong>{o.description && <small className="block">{A(L(o.description))}</small>}
                           </button>
                         );
                       })}
@@ -701,25 +731,30 @@ export default function Routes() {
               </div>
             )}
             {selectFields.map((f) => (
-              <label key={f.key} className="mt-5 block text-sm" style={{ color: "#373650" }}>{L(f.label)}
-                <select data-route-field={f.key} aria-label={L(f.label)} value={route.options[f.key]} onChange={(e) => setOption(f.key, e.target.value)}
-                  className="mt-2 block min-h-12 w-full max-w-xs border border-brand-100 bg-white px-4 text-sm outline-none focus:border-brand-500" style={{ color: INK }}>
-                  {f.options.map((o) => <option key={o.id} value={o.id}>{L(o.label)}</option>)}
-                </select>
+              <label key={f.key} className="mt-6 block">
+                <span className={LABEL} style={{ color: "#686879" }}>{L(f.label)}</span>
+                <span className="relative mt-2.5 block max-w-xs">
+                  <select data-route-field={f.key} aria-label={L(f.label)} value={route.options[f.key]} onChange={(e) => setOption(f.key, e.target.value)} className={`${FIELD} pr-10`} style={{ color: INK }}>
+                    {f.options.map((o) => <option key={o.id} value={o.id}>{L(o.label)}</option>)}
+                  </select>
+                  <Caret />
+                </span>
               </label>
             ))}
             {cardFields.map((f) => (
-              <fieldset key={f.key} className="mt-5">
-                <legend className="text-sm" style={{ color: "#373650" }}>{L(f.label)}</legend>
-                <div role="group" aria-label={L(f.label)} className="mt-2 grid gap-2 sm:grid-cols-3">
-                  {f.options.map((o) => {
+              <fieldset key={f.key} className="mt-6">
+                <legend className={LABEL} style={{ color: "#686879" }}>{L(f.label)}</legend>
+                <div role="group" aria-label={L(f.label)} className="mt-2.5 grid gap-2 sm:grid-cols-3">
+                  {f.options.map((o, i) => {
                     const on = route.options[f.key] === o.id;
                     return (
-                      <button key={o.id} type="button" aria-pressed={on} onClick={() => setOption(f.key, o.id)} className="relative border p-3 text-left transition-colors"
-                        style={on ? { borderColor: PURPLE, boxShadow: `inset 0 0 0 1px ${PURPLE}`, background: "#f8f7ff" } : { borderColor: "#e4e1ff", background: "#fbfaff" }}>
-                        <strong className="block pr-6 text-xs font-normal" style={{ color: INK }}>{A(L(o.label))}</strong>
-                        {o.description && <small className="mt-2 block text-xs leading-5" style={{ color: "#686879" }}>{A(L(o.description))}</small>}
-                        {on && <span className="absolute right-2.5 top-2.5" style={{ color: PURPLE }}>{I.check}</span>}
+                      <button key={o.id} type="button" aria-pressed={on} onClick={() => setOption(f.key, o.id)}
+                        className={`relative flex flex-col p-4 text-left ${PRESS} ${on ? "" : "[@media(hover:hover)]:hover:bg-[#ecebfc]"}`}
+                        style={on ? { background: "#fff", boxShadow: `inset 0 0 0 2px ${PURPLE}` } : { background: "#f3f2fd" }}>
+                        <span className="wf-sub text-[10px] font-bold tabular-nums" style={{ color: on ? PURPLE : "#a3a2bd" }}>{String(i + 1).padStart(2, "0")}</span>
+                        <strong className="mt-2 block pr-5 text-[13px] font-semibold leading-snug" style={{ color: INK }}>{A(L(o.label))}</strong>
+                        {o.description && <small className="mt-1.5 block text-[11px] leading-5" style={{ color: "#686879" }}>{A(L(o.description))}</small>}
+                        <span className={`absolute right-3 top-3 transition-[opacity,transform] duration-200 ease-out ${on ? "scale-100 opacity-100" : "scale-90 opacity-0"}`} style={{ color: PURPLE }}>{I.check}</span>
                       </button>
                     );
                   })}
@@ -727,35 +762,36 @@ export default function Routes() {
               </fieldset>
             ))}
 
-            <div className="mt-5 flex items-start gap-3 border-t border-brand-100 pt-4">
-              {route.load && <span className="shrink-0 px-2.5 py-1.5 text-[11px] font-bold" style={{ background: LIME, color: INK }}>{route.mode === "rail" ? "Rail " : ""}{route.load}</span>}
+            <div className="mt-6 flex items-start gap-3 p-4" style={{ background: "#f8f7ff" }}>
+              {route.load && <span className="wf-sub shrink-0 px-2 py-1 text-[10px] font-bold" style={{ background: LIME, color: INK }}>{route.mode === "rail" ? "Rail " : ""}{route.load}</span>}
               <p data-details className="text-xs leading-5" style={{ color: "#4b4b66" }}>{A(L(route.details))}</p>
             </div>
 
-            <details className="group mt-4 border-t border-brand-100">
-              <summary className="flex cursor-pointer list-none items-center justify-between py-4 text-sm font-bold [&::-webkit-details-marker]:hidden" style={{ color: INK }}>
-                <span>Route stages · {route.stops.length}</span><span className="transition-transform group-open:rotate-180" style={{ color: PURPLE }}>{I.caret}</span>
+            <details className="group/stages mt-6 border-t" style={{ borderColor: "#ecebf8" }}>
+              <summary className="flex cursor-pointer list-none items-center justify-between py-4 [&::-webkit-details-marker]:hidden">
+                <span className={LABEL} style={{ color: INK }}>Route stages · {route.stops.length}</span>
+                <span className="transition-transform duration-200 ease-out group-open/stages:rotate-180" style={{ color: PURPLE }}>{I.caret}</span>
               </summary>
-              <div className="flex gap-2">
-                <button type="button" onClick={() => { elapsed.current = 0; setPaused(false); draw(); }} className="inline-flex items-center gap-2 border border-brand-100 px-3 py-2 text-xs" style={{ color: INK }}>{I.replay}Replay route</button>
-                <button type="button" aria-pressed={playing} aria-label={motionLabel} onClick={() => setPaused((p) => !p)} className="inline-flex items-center justify-center border border-brand-100 px-3 py-2" style={{ color: INK }}>{playing ? I.pause : I.play}</button>
+              <div className="flex gap-1.5">
+                <button type="button" onClick={() => { elapsed.current = 0; setPaused(false); draw(); }} className={`inline-flex items-center gap-2 bg-[#f3f2fd] px-3 py-2 text-xs ${PRESS}`} style={{ color: INK }}>{I.replay}Replay route</button>
+                <button type="button" aria-pressed={playing} aria-label={motionLabel} onClick={() => setPaused((p) => !p)} className={`inline-flex items-center justify-center bg-[#f3f2fd] px-3 py-2 ${PRESS}`} style={{ color: PURPLE }}>{playing ? I.pause : I.play}</button>
               </div>
-              <ol className="mt-4 flex gap-4 overflow-x-auto pb-3">
+              <ol className="relative mt-5 flex gap-3 overflow-x-auto pb-4">
                 {route.stops.map((s, i) => {
                   const cur = i === legIndex, done = i < legIndex;
                   return (
-                    <li key={i} className="min-w-[130px] flex-1">
-                      <button type="button" aria-label={`${i + 1}. ${L(s.name)}`} aria-current={cur ? "step" : undefined} onClick={() => { focusRouteStop(i); scrollToMap(); }} className="w-full text-left">
+                    <li key={i} className="min-w-[128px] flex-1">
+                      <button type="button" aria-label={`${i + 1}. ${L(s.name)}`} aria-current={cur ? "step" : undefined} onClick={() => { focusRouteStop(i); scrollToMap(); }} className="group w-full text-left">
                         <span className="flex items-center">
-                          <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border text-xs tabular-nums"
-                            style={cur ? { background: PURPLE, borderColor: PURPLE, color: "#fff", boxShadow: `0 0 0 4px ${PURPLE}22` } : done ? { borderColor: PURPLE, color: PURPLE } : { borderColor: "#e4e1ff", color: "#4b4b66" }}>{String(i + 1).padStart(2, "0")}</span>
-                          <span className="ml-2 h-px flex-1" style={{ background: "#e4e1ff" }} />
+                          <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold tabular-nums transition-[background-color,color,box-shadow] duration-200 ease-out"
+                            style={cur ? { background: PURPLE, color: "#fff", boxShadow: `0 0 0 4px ${PURPLE}22` } : done ? { background: INK, color: LIME } : { background: "#f3f2fd", color: "#686879" }}>{String(i + 1).padStart(2, "0")}</span>
+                          {i < route.stops.length - 1 && <span className="ml-2 h-[2px] flex-1 transition-colors duration-300" style={{ background: done ? INK : "#ecebf8" }} />}
                         </span>
-                        <strong className="mt-3 block text-sm font-normal" style={{ color: INK }}>{L(s.name)}</strong>
-                        {s.kind && <em className="block text-[11px] not-italic" style={{ color: PURPLE }}>{COPY[s.kind]}</em>}
+                        <strong className="mt-3 block text-[13px] font-semibold leading-snug" style={{ color: INK }}>{L(s.name)}</strong>
+                        {s.kind && <em className="mt-0.5 block text-[11px] not-italic" style={{ color: PURPLE }}>{COPY[s.kind]}</em>}
                         {i < route.legs.length
-                          ? <small className="mt-1 inline-flex items-center gap-1.5 text-[11px]" style={{ color: "#4b4b66" }}>{modeIcon(route.legs[i].mode, "h-3.5 w-3.5")}{COPY[route.legs[i].mode]}</small>
-                          : <small className="mt-1 inline-flex items-center gap-1.5 text-[11px]" style={{ color: "#4b4b66" }}>{I.check}{COPY[route.mode === "air" && route.options.direction === "export" ? "arrival" : "gateway"]}</small>}
+                          ? <small className="mt-1.5 inline-flex items-center gap-1.5 text-[11px]" style={{ color: "#686879" }}>{modeIcon(route.legs[i].mode, "h-3.5 w-3.5")}{COPY[route.legs[i].mode]}</small>
+                          : <small className="mt-1.5 inline-flex items-center gap-1.5 text-[11px]" style={{ color: "#686879" }}>{I.check}{COPY[route.mode === "air" && route.options.direction === "export" ? "arrival" : "gateway"]}</small>}
                       </button>
                     </li>
                   );
@@ -763,13 +799,13 @@ export default function Routes() {
               </ol>
             </details>
 
-            <div className="mt-2 flex items-center gap-4">
+            <div className="mt-3 flex items-center gap-4">
               <input id="route-progress" ref={progressRef} type="range" min={0} max={100} step={0.1} defaultValue={0} aria-label="Preview progress"
                 onInput={(e) => { setPaused(true); elapsed.current = Math.min(total - 0.001, (total * Number((e.target as HTMLInputElement).value)) / 100); draw(); }}
-                className="h-1.5 w-full cursor-pointer appearance-none bg-brand-100 accent-brand-500" />
+                className="wf-range h-1 w-full cursor-pointer appearance-none bg-[#ecebf8] accent-brand-500" />
               <output ref={outputRef} htmlFor="route-progress" className="w-10 text-right text-xs tabular-nums" style={{ color: "#4b4b66" }}>0%</output>
             </div>
-            <p id="route-note" className="mt-5 text-[11px]" style={{ color: "#686879" }}>{COPY.note}{route.mode === "air" ? " " + COPY.airNote : ""}</p>
+            <p id="route-note" className="mt-6 text-[11px] leading-5" style={{ color: "#8a89a3" }}>{COPY.note}{route.mode === "air" ? " " + COPY.airNote : ""}</p>
           </section>
         </div>
       </div>
