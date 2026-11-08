@@ -26,7 +26,7 @@ function CardChrome({ title, reduce }: { title: string; reduce: boolean }) {
     <>
       <div aria-hidden="true" className="absolute inset-x-0 top-0 z-10 h-40 bg-[linear-gradient(to_bottom,rgba(4,4,43,0.35),rgba(4,4,43,0))]" />
       <WMark className="absolute right-7 top-7 z-10 h-12 w-auto md:h-14" color="#ffffff" />
-      <div className="absolute inset-x-0 -bottom-px z-10 h-[19%] min-h-[120px]" style={{ background: LIME, clipPath: BAND }}>
+      <div className="absolute inset-x-0 -bottom-px z-10 h-[19%] min-h-[76px]" style={{ background: LIME, clipPath: BAND }}>
         <div className="absolute inset-0 flex items-center overflow-hidden px-7 md:px-9">
           {/* Mask = one line box; old title leaves first, then the new one rises in (never both visible). */}
           <div data-title-mask className="overflow-hidden py-1">
@@ -142,7 +142,7 @@ export default function Services() {
           <div ref={steps}>{SERVICES.map((s, i) => <Step key={s.title} index={i} />)}</div>
         </div>
         <div className="relative">
-          <div className="sticky top-[6svh] h-[88svh] overflow-hidden bg-[#0b0b1f]">
+          <div className="sticky top-[6svh] ml-auto aspect-square overflow-hidden bg-[#0b0b1f]" style={{ width: "min(100%, 88svh)" }}>{/* square like the clips: nothing cropped */}
             {SERVICES.map((sv, i) => {
               const on = i === active;
               return (
@@ -166,7 +166,7 @@ export default function Services() {
           <article key={s.title}>
             <h3 className="sr-only">{s.title}</h3>
             <p className="text-xl leading-snug tracking-tight" style={{ color: NAVY }}>{s.text}</p>
-            <div className="relative mt-6 aspect-[4/5] overflow-hidden bg-[#0b0b1f]">
+            <div className="relative mt-6 aspect-square overflow-hidden bg-[#0b0b1f]">
               {near && desktop === false && (
                 <video muted loop playsInline autoPlay preload="none" poster={`/assets/services/${s.media}.jpg`} aria-hidden="true" className="h-full w-full object-cover">
                   <source src={`/assets/services/${s.media}.webm`} type="video/webm" />
