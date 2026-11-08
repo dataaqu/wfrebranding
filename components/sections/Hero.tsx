@@ -31,7 +31,7 @@ export default function Hero() {
     });
   }, [reduce]);
   return (
-    <section id="hero" className={`relative overflow-hidden ${collapsed ? "min-h-[100svh]" : ""}`}>
+    <section id="hero" className={`relative overflow-hidden ${collapsed ? "min-h-[86svh]" : ""}`}>
         {/* Full-bleed hero: the port video covers header, headline and the top of the product preview;
             the preview runs on past the video into the page (Flexport-style). Navy scrim for legibility. Reduced motion: no autoplay, poster only. */}
         <div aria-hidden="true" className={`absolute inset-x-0 top-0 overflow-hidden ${collapsed ? "bottom-0" : "bottom-[180px] md:bottom-[280px]"}`} style={{ background: "#04042b", ...chamfer(72, "br") }}>
@@ -40,7 +40,7 @@ export default function Hero() {
             style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", objectFit: "cover" }} />
           <video ref={videoMobile} className="md:hidden" src="/assets/hero-540.webm" poster="/assets/hero-port.png" muted loop playsInline autoPlay={!reduce} preload="metadata"
             style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", objectFit: "cover" }} />
-          <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(4,4,43,0.5) 0%, rgba(4,4,43,0.28) 45%, rgba(4,4,43,0.12) 100%)" }} />
+          <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(4,4,43,0.62) 0%, rgba(4,4,43,0.46) 45%, rgba(4,4,43,0.3) 100%)" }} />
         </div>
 
         {/* header */}
