@@ -119,6 +119,14 @@ const PIN_D = "M12 2a7 7 0 0 0-7 7c0 5.2 7 13 7 13s7-7.8 7-13a7 7 0 0 0-7-7zm0 9
 const FLAG_D = "M5 3h2v18H5zM8 4h11l-2.6 4.2L19 12.5H8z";
 const ANCHOR_D = "M12 2.5a2.75 2.75 0 0 0-1 5.31V10H8v2h3v7.85A7.5 7.5 0 0 1 4.6 14H7L3.75 9.5.5 14h2.07A9.5 9.5 0 0 0 12 22a9.5 9.5 0 0 0 9.43-8h2.07l-3.25-4.5L17 14h2.4A7.5 7.5 0 0 1 13 19.85V12h3v-2h-3V7.81A2.75 2.75 0 0 0 12 2.5zm0 1.75a1 1 0 1 1 0 2 1 1 0 0 1 0-2z";
 const SHIELD_D = "M12 2 4 5v6c0 5.1 3.4 9.7 8 11 4.6-1.3 8-5.9 8-11V5zm-1 14.2-3.7-3.7 1.4-1.4 2.3 2.3 4.6-4.6 1.4 1.4z";
+/* 3D vehicle sprites (GPT Image 2.6, brand colours), all drawn facing east; width in map px at scale 1 */
+const SPRITES = {
+  truck: { href: "/assets/vehicles/truck.webp", aspect: 4.0, w: 52, free: false },
+  ship: { href: "/assets/vehicles/ship.webp", aspect: 3.137, w: 50, free: true },
+  train: { href: "/assets/vehicles/train.webp", aspect: 7.619, w: 68, free: false },
+  plane: { href: "/assets/vehicles/plane.webp", aspect: 1.046, w: 42, free: true },
+} as const;
+const spriteOf = (m: string): keyof typeof SPRITES => (m === "air" ? "plane" : m === "rail" ? "train" : m === "road" ? "truck" : "ship");
 type StopType = "origin" | "destination" | "warehouse" | "terminal" | "border" | "port" | "air" | "stop";
 /** What a stop is, from the engine's data: kind, adjacent leg modes, and its name. */
 function stopType(route: Route, i: number): StopType {
@@ -322,14 +330,14 @@ export default function Routes() {
     const b = geometry[idx], t = Math.max(0, Math.min(1, (e - b.start) / b.duration));
     const [x, y] = pointAt(b, t);
     vehicleRef.current?.setAttribute("transform", `translate(${x.toFixed(2)},${y.toFixed(2)}) scale(${scale.current})`);
-    // heading from the curve tangent; the plane (drawn nose-up) rotates freely, ground/sea icons (drawn facing right)
-    // turn with the route but mirror instead of going upside-down when heading west
+    // heading from the curve tangent
     const [ax, ay] = pointAt(b, Math.max(0, t - 0.01)), [bx, by] = pointAt(b, Math.min(1, t + 0.01));
     const deg = (Math.atan2(by - ay, bx - ax) * 180) / Math.PI;
     const west = Math.abs(deg) > 90;
-    vehicleIconRef.current?.setAttribute("transform", b.leg.mode === "air"
-      ? `rotate(${(deg + 90).toFixed(1)})`
-      : west ? `scale(-1,1) rotate(${(180 - deg).toFixed(1)})` : `rotate(${deg.toFixed(1)})`);
+    // top-down sprites (ship, plane) rotate freely; side-view sprites (truck, train) mirror instead of flipping
+    vehicleIconRef.current?.setAttribute("transform", SPRITES[spriteOf(b.leg.mode)].free || !west
+      ? `rotate(${deg.toFixed(1)})`
+      : `scale(-1,1) rotate(${(180 - deg).toFixed(1)})`);
     geometry.forEach((_, i) => {
       const tr = trailRefs.current[i];
       if (!tr) return;
@@ -764,8 +772,11 @@ export default function Routes() {
                     );
                   })}
                   <g ref={vehicleRef} aria-hidden="true" data-mode={leg.mode}>
-                    <g ref={vehicleIconRef} style={{ color: INK }}>
-                      {cloneElement(mapIcon(leg.mode, 24), { stroke: "#fff", strokeWidth: 2.2, strokeLinejoin: "round", paintOrder: "stroke" })}
+                    <g ref={vehicleIconRef}>
+                      {(() => {
+                        const v = SPRITES[spriteOf(leg.mode)];
+                        return <image href={v.href} width={v.w} height={v.w / v.aspect} x={-v.w / 2} y={-v.w / v.aspect / 2} preserveAspectRatio="xMidYMid meet" />;
+                      })()}
                     </g>
                   </g>
                   {engine.regions.map((r) => {
