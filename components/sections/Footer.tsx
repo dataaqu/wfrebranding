@@ -7,7 +7,8 @@ import { chamfer, WMark, Wordmark } from "@/components/brand/design-system";
 
 // Contact details as published on weforward.ge.
 const NAVY = "#04042b";
-const EXPLORE = [["Routes", "#routes"], ["Services", "#services"], ["Network", "#network"], ["Track your cargo", "#tracking"], ["Get a quote", "#quote"], ["FAQ", "#faq"]];
+// same items as the header nav; labels only until the links are decided
+const EXPLORE = ["About us", "Services", "Track your cargo", "News", "Contact"];
 const CONTACT = [
   ["sales@weforward.ge", "mailto:sales@weforward.ge"],
   ["+995 591 32 12 92", "tel:+995591321292"],
@@ -115,7 +116,7 @@ export default function Footer() {
           </div>
 
             <Col title="EXPLORE">
-              {EXPLORE.map(([t, h]) => <li key={h}><a href={h} className={LINK}>{t}</a></li>)}
+              {EXPLORE.map((t) => <li key={t}><span className="cursor-default text-[15px] text-white/75">{t}</span></li>)}
             </Col>
             <Col title="CONTACT">
               {CONTACT.map(([t, h]) => (
