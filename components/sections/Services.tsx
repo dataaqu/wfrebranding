@@ -57,7 +57,6 @@ function Step({ index }: { index: number }) {
         {s.title}
       </motion.h3>
       <div className="relative mt-10">
-        <span aria-hidden="true" className="absolute -left-10 top-1/2 font-mono text-[10px] text-[#9a99ad]">0{index + 1}</span>
         <p className="max-w-[460px] text-[clamp(1.6rem,2.5vw,2.4rem)] leading-[1.18] tracking-tight" style={{ color: NAVY }}>
           {reduce ? s.text : words.map((w, i) => (
             <Word key={i} progress={scrollYProgress} start={0.15 + (i / words.length) * 0.6} end={0.15 + ((i + 1) / words.length) * 0.6}>{w}</Word>
@@ -77,7 +76,7 @@ export default function Services() {
   useMotionValueEvent(scrollYProgress, "change", (v) => setActive(Math.min(SERVICES.length - 1, Math.max(0, Math.floor(v * SERVICES.length)))));
 
   return (
-    <section id="services" className="bg-white pb-24 pt-8">
+    <section id="services" className="bg-white pb-24 pt-16 md:pt-24">
       <div className="mx-auto max-w-[1440px] px-6 md:px-10 lg:pl-[120px] xl:pl-[176px]">
         <Reveal id="services-head">
           <h2 className="wf-head text-4xl md:text-6xl" style={{ color: NAVY }}>Services</h2>
@@ -111,8 +110,7 @@ export default function Services() {
       <div className="mx-auto mt-12 max-w-6xl space-y-14 px-6 md:px-10 lg:hidden">
         {SERVICES.map((s, i) => (
           <article key={s.title}>
-            <span className="font-mono text-[10px] text-[#9a99ad]">0{i + 1}</span>
-            <h3 className="mt-2 text-2xl font-medium tracking-tight" style={{ color: NAVY }}>{s.title}</h3>
+            <h3 className="text-2xl font-medium tracking-tight" style={{ color: NAVY }}>{s.title}</h3>
             <p className="mt-4 text-xl leading-snug tracking-tight" style={{ color: NAVY }}>{s.text}</p>
             <div className="mt-6 aspect-[4/5] overflow-hidden rounded-lg bg-[#0b0b1f]" style={{ clipPath: NOTCH }}>
               <video muted loop playsInline autoPlay preload="none" poster={`/assets/services/${s.media}.jpg`} aria-hidden="true" className="h-full w-full object-cover">
