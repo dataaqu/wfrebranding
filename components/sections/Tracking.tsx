@@ -251,7 +251,6 @@ export default function Tracking() {
             </div>
           </div>
         )}
-        <p className="mt-6 text-[12px] text-[#8a89a6]">Providers may require sign-in or additional verification. Vessel and flight positions do not confirm that your cargo is aboard.</p>
       </div>
     </section>
   );
