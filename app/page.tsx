@@ -5,10 +5,6 @@ import Services from "@/components/sections/Services";
 import Tracking from "@/components/sections/Tracking";
 import Network from "@/components/sections/Network";
 import Routes from "@/components/sections/Routes";
-import Rail from "@/components/sections/Rail";
-import Brokerage from "@/components/sections/Brokerage";
-import Quote from "@/components/sections/Quote";
-import Footer from "@/components/sections/Footer";
 
 export default function Page() {
   return <main id="main" className="font-sans antialiased" style={{ background: "#ffffff", color: "#04042b" }}>
@@ -19,9 +15,5 @@ export default function Page() {
     <Services />
     <Network />
     <Tracking />
-    <Rail />
-    <Brokerage />
-    <Quote />
-    <Footer />
   </main>;
 }
