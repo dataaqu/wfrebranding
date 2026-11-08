@@ -20,10 +20,10 @@ export default function Hero() {
     });
   }, [reduce]);
   return (
-    <section id="hero" className="relative overflow-hidden" style={{ background: "#04042b" }}>
-        {/* Full-bleed hero: the port video covers the whole section behind header, headline and preview,
-            with a navy scrim for legibility. Reduced motion: no autoplay, poster only. */}
-        <div aria-hidden="true" style={{ position: "absolute", inset: 0, overflow: "hidden" }}>
+    <section id="hero" className="relative overflow-hidden">
+        {/* Full-bleed hero: the port video covers header, headline and the top of the product preview;
+            the preview runs on past the video into the page (Flexport-style). Navy scrim for legibility. Reduced motion: no autoplay, poster only. */}
+        <div aria-hidden="true" className="absolute inset-x-0 top-0 bottom-[180px] overflow-hidden md:bottom-[280px]" style={{ background: "#04042b" }}>
           <div style={{ position: "absolute", inset: 0, backgroundImage: "url('/assets/hero-port.png')", backgroundSize: "cover", backgroundPosition: "center 55%" }} />
           <video ref={videoDesktop} className="hidden md:block" src="/assets/hero-720.webm" poster="/assets/hero-port.png" muted loop playsInline autoPlay={!reduce} preload="metadata"
             style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", objectFit: "cover" }} />
@@ -95,7 +95,7 @@ export default function Hero() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 1, delay: reduce ? 0 : INTRO_REVEAL_AT + 0.35, ease: [0.16, 1, 0.3, 1] }}
         >
-          <div className="h-[300px] overflow-hidden border border-b-0 border-white/15 bg-ink-900 p-2 pb-0 md:h-[380px]" style={chamfer(28, "tr")}>
+          <div className="overflow-hidden border border-white/15 bg-ink-900 p-2 shadow-[0_30px_80px_-20px_rgba(4,4,43,0.45)]" style={chamfer(28, "tr")}>
            <div style={{ minWidth: 960 }}>
             {/* ---- app bar ---- */}
             <div className="flex items-center gap-5 bg-ink-950 px-6" style={{ height: 60 }}>
