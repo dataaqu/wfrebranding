@@ -34,7 +34,7 @@ export default function Hero() {
 
         {/* header */}
         <header id="header" className="relative z-20">
-          <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-5 py-5 md:gap-6 md:px-10" style={{ borderBottom: "1px solid rgba(255,255,255,0.15)" }}>
+          <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-5 py-4 md:gap-6 md:px-10" style={{ borderBottom: "1px solid rgba(255,255,255,0.15)" }}>
             <a href="#main" aria-label="WEFORWARD home"><LogoHorizontal size="sm" wordColor="#ffffff" /></a>
             <nav aria-label="Main" className="hidden items-center gap-7 lg:flex">
               {[["Services", "#services"], ["Rail from China", "#rail"], ["Customs", "#brokerage"], ["How it works", "#how"], ["Contact", "#quote"]].map(([t, h]) => (
@@ -59,14 +59,14 @@ export default function Hero() {
         </header>
 
         {/* centred promise + inline quote capture */}
-        <div className="relative z-10 mx-auto max-w-4xl px-6 pb-16 pt-16 text-center md:pt-20">
+        <div className="relative z-10 mx-auto max-w-4xl px-6 pb-10 pt-10 text-center md:pb-12 md:pt-14">
           <h1 className="sr-only">You deal. We deliver. Freight forwarding in Georgia.</h1>
           <div aria-hidden="true">
             {["You deal.", "We deliver."].map((line, i) => (
               <div key={line} style={{ overflow: "hidden" }}>
                 <motion.div
                   data-anim={`hero-line-${i}`}
-                  className="wf-head text-5xl md:text-8xl"
+                  className="wf-head text-4xl md:text-6xl"
                   style={{ color: i === 0 ? "#a296f7" : "#ffffff" }}
                   initial={reduce ? false : { y: "110%" }}
                   animate={{ y: "0%" }}
@@ -81,7 +81,7 @@ export default function Hero() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: reduce ? 0 : INTRO_REVEAL_AT + 0.25, ease: [0.16, 1, 0.3, 1] }}
           >
-            <p className="mx-auto mt-8 max-w-xl text-base leading-7 md:text-lg" style={{ color: "rgba(255,255,255,0.85)" }}>
+            <p className="mx-auto mt-5 max-w-xl text-base leading-7 md:text-lg" style={{ color: "rgba(255,255,255,0.85)" }}>
               Air, sea, rail and road freight plus customs brokerage — one partner moving your cargo from China, Europe and beyond to your door in Georgia.
             </p>
           </motion.div>
@@ -90,12 +90,12 @@ export default function Hero() {
         {/* product preview — WEFORWARD Track (cropped at the bottom like a window) */}
         <motion.div
           data-anim="hero-dashboard"
-          className="relative z-10 mx-auto max-w-6xl px-6 pb-16 md:px-10"
+          className="relative z-10 mx-auto max-w-6xl px-6 md:px-10"
           initial={reduce ? false : { opacity: 0, y: 80 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 1, delay: reduce ? 0 : INTRO_REVEAL_AT + 0.35, ease: [0.16, 1, 0.3, 1] }}
         >
-          <div className="overflow-hidden border border-white/15 bg-ink-900 p-2" style={chamfer(28, "tr")}>
+          <div className="h-[300px] overflow-hidden border border-b-0 border-white/15 bg-ink-900 p-2 pb-0 md:h-[380px]" style={chamfer(28, "tr")}>
            <div style={{ minWidth: 960 }}>
             {/* ---- app bar ---- */}
             <div className="flex items-center gap-5 bg-ink-950 px-6" style={{ height: 60 }}>
