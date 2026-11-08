@@ -6,16 +6,34 @@ import { INTRO_REVEAL_AT, LogoHorizontal, WMark, chamfer, Button, IconPlane, Ico
 import { SERIES, MILESTONES, KPIS, AXIS_MAX, SIDEBAR } from "@/data/landing";
 
 const EASE = [0.16, 1, 0.3, 1] as const;
-// Genie states: full window → bottom funnelled in → sucked into the button at the top centre.
-const GENIE = [
-  { clipPath: "polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%)", scaleX: 1, scaleY: 1, opacity: 1 },
-  { clipPath: "polygon(0% 0%, 100% 0%, 70% 100%, 30% 100%)", scaleX: 0.94, scaleY: 0.62, opacity: 1 },
-  { clipPath: "polygon(43% 0%, 57% 0%, 51% 100%, 49% 100%)", scaleX: 0.32, scaleY: 0.03, opacity: 0 },
-] as const;
-const genieFrames = (order: number[]) => ({
-  clipPath: order.map((i) => GENIE[i].clipPath), scaleX: order.map((i) => GENIE[i].scaleX),
-  scaleY: order.map((i) => GENIE[i].scaleY), opacity: order.map((i) => GENIE[i].opacity),
-});
+// macOS-style genie, generated: each frame is a polygon whose left/right edges are sampled down the
+// window, so the sides bend like a funnel. The bottom is pulled in first and the top last, the window
+// shortens late, and everything converges on a narrow slot at the top centre (the Open button).
+const GENIE_FRAMES = 14, GENIE_ROWS = 12, GENIE_SLOT = 0.06; // slot = half-width of the target, in % / 100
+const smooth = (x: number) => { const c = Math.min(1, Math.max(0, x)); return c * c * (3 - 2 * c); };
+function genieAt(f: number) {
+  const left: string[] = [], right: string[] = [];
+  for (let r = 0; r <= GENIE_ROWS; r++) {
+    const y = r / GENIE_ROWS; // 0 = top edge, 1 = bottom edge
+    const pull = smooth(f * 1.7 - (1 - y) * 0.7); // lower rows start earlier
+    const half = 0.5 - (0.5 - GENIE_SLOT) * pull;
+    left.push(`${((0.5 - half) * 100).toFixed(2)}% ${(y * 100).toFixed(2)}%`);
+    right.unshift(`${((0.5 + half) * 100).toFixed(2)}% ${(y * 100).toFixed(2)}%`);
+  }
+  return {
+    clipPath: `polygon(${[...left, ...right].join(", ")})`,
+    scaleY: 1 - 0.97 * smooth((f - 0.3) / 0.7),
+    opacity: f > 0.9 ? 1 - (f - 0.9) / 0.1 : 1,
+  };
+}
+/** keyframes for closing (0→1) or opening (1→0); `bias` > 1 eases in, < 1 eases out */
+function genieKeyframes(closing: boolean) {
+  const fs = Array.from({ length: GENIE_FRAMES }, (_, k) => { const t = k / (GENIE_FRAMES - 1); return closing ? Math.pow(t, 1.35) : 1 - Math.pow(1 - t, 1.6); });
+  const frames = fs.map((t) => genieAt(closing ? t : 1 - t));
+  return { clipPath: frames.map((g) => g.clipPath), scaleY: frames.map((g) => g.scaleY), opacity: frames.map((g) => g.opacity) };
+}
+const GENIE_CLOSE = genieKeyframes(true), GENIE_OPEN = genieKeyframes(false);
+const GENIE_REST = genieAt(0), GENIE_GONE = genieAt(1);
 // Placeholder until real TMS screens are ready; flip to true to show the mock dashboard again.
 const SHOW_TMS_MOCK = false;
 
@@ -28,7 +46,11 @@ export default function Hero() {
   const [closed, setClosed] = useState(true); // platform window starts closed
   const [minimized, setMinimized] = useState(false);
   const [zoomed, setZoomed] = useState(false);
-  const collapsed = closed || minimized;
+  // the hero keeps its open layout until the closing genie has finished, so the window isn't clipped mid-animation
+  const [exiting, setExiting] = useState(false);
+  const heroRef = useRef<HTMLElement>(null);
+  const [frozenH, setFrozenH] = useState<number | null>(null); // hero height locked while the window animates out
+  const collapsed = (closed && !exiting) || minimized;
   // Closed/minimised: the hero is one screen tall and the video fills it. Open: the video band stops
   // `overlap` px above the hero bottom so the window runs past it into the page.
   const videoDesktop = useRef<HTMLVideoElement>(null);
@@ -41,7 +63,7 @@ export default function Hero() {
     });
   }, [reduce]);
   return (
-    <section id="hero" className={`relative z-20 overflow-hidden ${collapsed ? "min-h-[90svh]" : ""}`}>
+    <section ref={heroRef} id="hero" className={`relative z-20 overflow-hidden transition-[min-height] duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none ${collapsed ? "min-h-[90svh]" : ""}`} style={frozenH ? { minHeight: frozenH } : undefined}>
         {/* Full-bleed hero: the port video covers header, headline and the top of the product preview;
             the preview runs on past the video into the page (Flexport-style). Navy scrim for legibility. Reduced motion: no autoplay, poster only. */}
         <div aria-hidden="true" className={`absolute inset-x-0 top-0 overflow-hidden ${collapsed ? "bottom-0" : "bottom-[180px] md:bottom-[280px]"}`} style={{ background: "#04042b", ...chamfer(72, "br") }}>
@@ -116,7 +138,7 @@ export default function Hero() {
           animate={{ y: 0, maxWidth: zoomed ? 1440 : 1152 }}
           transition={{ default: { duration: 1, delay: reduce ? 0 : INTRO_REVEAL_AT + 0.35, ease: EASE }, maxWidth: { duration: reduce ? 0 : 0.55, ease: EASE } }}
         >
-          <AnimatePresence mode="popLayout" initial={false}>
+          <AnimatePresence mode="popLayout" initial={false} onExitComplete={() => { setExiting(false); setFrozenH(null); }}>
           {closed ? (
             <motion.div
               key="dock"
@@ -141,9 +163,9 @@ export default function Hero() {
             /* macOS-style "genie": the bottom edge funnels toward the centre, then the window is
                drawn up into the Open button (and pours back out of it on open). */
             style={{ transformOrigin: "50% 0%", willChange: "transform, clip-path" }}
-            initial={reduce ? false : GENIE[2]}
-            animate={reduce ? GENIE[0] : { ...GENIE[0], ...genieFrames([2, 1, 0]), transition: { duration: 0.6, times: [0, 0.45, 1], ease: [0.16, 1, 0.3, 1] } }}
-            exit={reduce ? { opacity: 0, transition: { duration: 0 } } : { ...genieFrames([0, 1, 2]), transition: { duration: 0.55, times: [0, 0.5, 1], ease: [0.6, 0, 0.9, 0.4] } }}
+            initial={reduce ? false : GENIE_GONE}
+            animate={reduce ? GENIE_REST : { ...GENIE_OPEN, transition: { duration: 0.62, ease: "linear" } }}
+            exit={reduce ? { opacity: 0, transition: { duration: 0 } } : { ...GENIE_CLOSE, transition: { duration: 0.58, ease: "linear" } }}
           >
           <div
             className="overflow-hidden border border-white/15 bg-ink-900 p-2 pt-0 shadow-[0_30px_80px_-20px_rgba(4,4,43,0.45)]"
@@ -153,7 +175,7 @@ export default function Hero() {
             <div className="group/tl relative flex h-9 items-center px-1">
               <div className="relative z-10 flex items-center gap-2">
                 {([
-                  { key: "close", color: "#ff5f57", label: "Close preview window", onClick: () => { setClosed(true); setMinimized(false); setZoomed(false); }, glyph: <path d="M3.5 3.5l5 5M8.5 3.5l-5 5" /> },
+                  { key: "close", color: "#ff5f57", label: "Close preview window", onClick: () => { if (!reduce) { setFrozenH(heroRef.current?.offsetHeight ?? null); setExiting(true); } setClosed(true); setMinimized(false); setZoomed(false); }, glyph: <path d="M3.5 3.5l5 5M8.5 3.5l-5 5" /> },
                   { key: "minimize", color: "#febc2e", label: minimized ? "Restore preview window" : "Minimise preview window", onClick: () => setMinimized((m) => !m), glyph: <path d="M3 6h6" /> },
                   { key: "zoom", color: "#28c840", label: zoomed ? "Exit full width" : "Expand to full width", onClick: () => { setZoomed((z) => !z); setMinimized(false); }, glyph: <path d="M3.5 8.5V5l3.5 3.5H3.5zM8.5 3.5V7L5 3.5h3.5z" fill="currentColor" stroke="none" /> },
                 ] as const).map((b) => (
