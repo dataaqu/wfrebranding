@@ -36,8 +36,13 @@ export default function FactsGlobe({ progress, reduce }: { progress: MotionValue
     const host = hostRef.current;
     if (!host) return;
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    // Performance budget: weak devices (≤4 cores or ≤4 GB) get 1× pixels, a 2K texture and no idle animation.
+    const nav = navigator as Navigator & { deviceMemory?: number };
+    const lowEnd = (nav.hardwareConcurrency ?? 8) <= 4 || (nav.deviceMemory ?? 8) <= 4;
+    const dpr = Math.min(window.devicePixelRatio || 1, lowEnd ? 1 : 1.5);
+    // MSAA only where pixels are coarse; at ≥1.5× the sphere edge is already smooth
+    const renderer = new THREE.WebGLRenderer({ antialias: dpr < 1.5, alpha: true, powerPreference: lowEnd ? "low-power" : "default" });
+    renderer.setPixelRatio(dpr);
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     host.appendChild(renderer.domElement);
     renderer.domElement.style.display = "block";
@@ -55,10 +60,12 @@ export default function FactsGlobe({ progress, reduce }: { progress: MotionValue
     const spin = new THREE.Group(); // rotates with scroll; markers live on it
     globe.add(spin);
 
-    const tex = new THREE.TextureLoader().load("/assets/earth-brand.jpg", () => { needsRender = true; });
+    // 4K only when the globe is drawn large on a capable device; otherwise 2K (¼ the GPU memory and decode time)
+    const big = !lowEnd && Math.min(host.clientWidth, host.clientHeight * 1.15) * dpr > 1100;
+    const tex = new THREE.TextureLoader().load(big ? "/assets/earth-brand.jpg" : "/assets/earth-brand-2k.jpg", () => { needsRender = true; kick(); });
     tex.colorSpace = THREE.SRGBColorSpace;
-    tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
-    const earth = new THREE.Mesh(new THREE.SphereGeometry(R, 96, 96), new THREE.MeshLambertMaterial({ map: tex }));
+    tex.anisotropy = Math.min(4, renderer.capabilities.getMaxAnisotropy());
+    const earth = new THREE.Mesh(new THREE.SphereGeometry(R, 64, 48), new THREE.MeshLambertMaterial({ map: tex }));
     spin.add(earth);
 
     // Georgia: country shape in phosphor lime, with a soft glow (fades in late)
@@ -94,7 +101,9 @@ export default function FactsGlobe({ progress, reduce }: { progress: MotionValue
     glow.renderOrder = 1;
     spin.add(glow);
 
-    let w = 0, h = 0, needsRender = true, visible = true, raf = 0;
+    let w = 0, h = 0, needsRender = true, visible = false, raf = 0, lastDraw = 0;
+    const idleAnim = !reduce && !lowEnd; // gentle sway + breathing glow; off on weak devices
+    const kick = () => { if (visible && !raf && !document.hidden) raf = requestAnimationFrame(frame); };
     const resize = () => {
       w = host.clientWidth; h = host.clientHeight;
       renderer.setSize(w, h, false);
@@ -102,25 +111,29 @@ export default function FactsGlobe({ progress, reduce }: { progress: MotionValue
       renderer.domElement.style.height = `${h}px`;
       camera.aspect = w / h;
       camera.updateProjectionMatrix();
-      needsRender = true;
+      needsRender = true; kick();
     };
-    resize();
     const ro = new ResizeObserver(resize);
     ro.observe(host);
-    const io = new IntersectionObserver(([e]) => { visible = e.isIntersecting; }, { rootMargin: "100px" });
+    const io = new IntersectionObserver(([e]) => { visible = e.isIntersecting; if (visible) { needsRender = true; kick(); } }, { rootMargin: "100px" });
     io.observe(host);
-    const unsub = progress.on("change", () => { needsRender = true; });
+    const onVis = () => { if (!document.hidden) { needsRender = true; kick(); } };
+    document.addEventListener("visibilitychange", onVis);
+    const unsub = progress.on("change", () => { needsRender = true; kick(); });
 
     const endRot = faceLon(TBILISI[1] + 22); // Georgia slightly left of centre
     const startRot = endRot + 1.1;
     const t0 = performance.now();
 
-    const frame = (now: number) => {
-      raf = requestAnimationFrame(frame);
-      if (!visible) return;
+    function frame(now: number) {
+      raf = 0;
+      if (!visible || document.hidden) return;              // loop sleeps until visible again (kick)
+      if (needsRender || idleAnim) raf = requestAnimationFrame(frame);
+      else return;                                          // nothing changed and nothing to animate: stop
+      if (!needsRender && now - lastDraw < 33) return;      // idle sway only needs ~30fps
+      lastDraw = now;
       const p = reduce ? 1 : progress.get();
       const tSec = (now - t0) / 1000;
-      if (!needsRender && reduce) return;
 
       // fit: radius in screen ~ 0.36 of min(w,h) at the end, ~1.1 of width at the start
       const k = easeOut(range(p, 0.05, 0.7)); // rotates and shrinks into a full sphere
@@ -140,22 +153,23 @@ export default function FactsGlobe({ progress, reduce }: { progress: MotionValue
       globe.position.y = touchPx * worldPerPx;
 
       globe.rotation.x = 0.42; // show the northern hemisphere
-      spin.rotation.y = lerp(startRot, endRot, k) + (reduce ? 0 : Math.sin(tSec * 0.25) * 0.12); // gentle sway, never drifts away from Georgia
+      spin.rotation.y = lerp(startRot, endRot, k) + (idleAnim ? Math.sin(tSec * 0.25) * 0.12 : 0); // gentle sway, never drifts away from Georgia
 
       const f = easeOut(range(p, 0.4, 0.75));
       fillMat.opacity = f;
       edgeMat.opacity = f;
-      const breathe = reduce ? 0.75 : 0.6 + 0.4 * Math.sin(tSec * 2.2); // phosphor glow
+      const breathe = idleAnim ? 0.6 + 0.4 * Math.sin(tSec * 2.2) : 0.75; // phosphor glow
       glowMat.opacity = f * breathe;
       glow.scale.setScalar(0.14 + 0.03 * breathe);
 
       renderer.render(scene, camera);
       needsRender = false;
-    };
-    raf = requestAnimationFrame(frame);
+    }
+    resize();
 
     return () => {
       cancelAnimationFrame(raf);
+      document.removeEventListener("visibilitychange", onVis);
       unsub();
       ro.disconnect();
       io.disconnect();
@@ -167,6 +181,7 @@ export default function FactsGlobe({ progress, reduce }: { progress: MotionValue
         if (Array.isArray(mat)) mat.forEach((x) => x.dispose()); else mat?.dispose?.();
       });
       tex.dispose();
+      glowTex.dispose();
       host.removeChild(renderer.domElement);
     };
   }, [progress, reduce]);
