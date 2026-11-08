@@ -175,6 +175,9 @@ export default function Routes() {
   const progressRef = useRef<HTMLInputElement>(null);
   const outputRef = useRef<HTMLOutputElement>(null);
   const camera = useRef<Box>([0, 0, 1000, 500]);
+  const insets = useRef({ left: 0, top: 0, right: 0, bottom: 0 });
+  const panelRef = useRef<HTMLElement>(null);
+  const dockRef = useRef<HTMLDivElement>(null);
   const scale = useRef(1);
   const elapsed = useRef(0);
   const visible = useRef(false);
@@ -324,7 +327,10 @@ export default function Routes() {
       m.inner.setAttribute("transform", `translate(0,${dy * s}) scale(${s})`);
       m.leader?.setAttribute("d", dy ? `M0,0 L0,${dy * s}` : "");
     });
-    const narrow = box[2] / s < 470;
+    // labels stay inside the unoccluded area (floating console/overlays cover part of the map on desktop)
+    const ins = insets.current;
+    const vis: Box = [box[0] + ins.left * s, box[1] + ins.top * s, Math.max(1, width - ins.left - ins.right) * s, Math.max(1, height - ins.top - ins.bottom) * s];
+    const narrow = vis[2] / s < 470;
     const taken: { x: number; y: number; w: number; h: number }[] = [];
     engine.regions.forEach((r: Region) => {
       const item = labelRefs.current[r.id];
@@ -342,8 +348,8 @@ export default function Routes() {
       const a = project(r.point), w = lw * s, h = lh * s, pref = [a[0] + r.offset[0] * s, a[1] + r.offset[1] * s];
       let best: { x: number; y: number; score: number } | null = null;
       for (let dx = -4; dx <= 4; dx++) for (let dyy = -5; dyy <= 5; dyy++) {
-        const x = Math.max(box[0] + w / 2 + 5 * s, Math.min(box[0] + box[2] - w / 2 - 5 * s, pref[0] + dx * 40 * s));
-        const y = Math.max(box[1] + h / 2 + 5 * s, Math.min(box[1] + box[3] - h / 2 - 5 * s, pref[1] + dyy * 26 * s));
+        const x = Math.max(vis[0] + w / 2 + 5 * s, Math.min(vis[0] + vis[2] - w / 2 - 5 * s, pref[0] + dx * 40 * s));
+        const y = Math.max(vis[1] + h / 2 + 5 * s, Math.min(vis[1] + vis[3] - h / 2 - 5 * s, pref[1] + dyy * 26 * s));
         const overlaps = taken.reduce((sum, q) => sum + (Math.abs(x - q.x) < (w + q.w) / 2 + 4 * s && Math.abs(y - q.y) < (h + q.h) / 2 + 4 * s ? 1 : 0), 0);
         const score = overlaps * 1e9 + ((x - pref[0]) / s) ** 2 + ((y - pref[1]) / s) ** 2;
         if (!best || score < best.score) best = { x, y, score };
@@ -366,7 +372,20 @@ export default function Routes() {
     let raf = 0;
     const fit = (animate: boolean) => {
       const width = host.clientWidth || 680, height = host.clientHeight || 420;
-      const target: Box = view === "focus" ? focusBox(route, focused, width, height) : [0, 0, 1000, 500];
+      // desktop: the console floats over the right of the map and controls over the bottom-left — keep the route clear of them
+      const desk = !expanded && matchMedia("(min-width: 1024px)").matches;
+      const panelW = panelRef.current?.offsetWidth || 0, dockH = dockRef.current?.offsetHeight || 0;
+      insets.current = desk ? { left: 0, top: 64, right: panelW + 48, bottom: dockH + 32 } : { left: 0, top: 56, right: 0, bottom: 0 };
+      const ins = insets.current, visW = Math.max(200, width - ins.left - ins.right), visH = Math.max(160, height - ins.top - ins.bottom);
+      let vb: Box;
+      if (view === "focus") vb = focusBox(route, focused, visW, visH);
+      else {
+        let w = 1000, h = 500;
+        if (w / h < visW / visH) w = h * (visW / visH); else h = w / (visW / visH);
+        vb = [500 - w / 2, 250 - h / 2, w, h];
+      }
+      const k = vb[2] / visW;
+      const target: Box = [vb[0] - ins.left * k, vb[1] - ins.top * k, width * k, height * k];
       cancelAnimationFrame(raf);
       if (!animate || reducedMotion()) return applyCamera(target);
       const from = camera.current.slice() as Box, t0 = performance.now();
@@ -487,35 +506,15 @@ export default function Routes() {
           <p className="max-w-[17rem] text-[15px] leading-7" style={{ color: "#4b4b66" }}>Choose a country. Explore the connections. See every stage.</p>
         </div>
 
-        <div className="mt-10 grid items-start gap-5 lg:grid-cols-[1fr_1.02fr]">
-          {/* ================= scene: map + modes + consolidation strip ================= */}
-          <div className="min-w-0 lg:sticky lg:top-6">
-            {expanded && <div className="fixed inset-0 z-[65] bg-ink-950/40 backdrop-blur-[2px]" onClick={() => setExpanded(false)} aria-hidden="true" />}
-            <div ref={worldRef} data-mode={route.mode} className={`relative flex flex-col overflow-hidden ${SURFACE} ${expanded ? "fixed inset-3 z-[70] md:inset-8" : "h-[540px] md:h-[600px]"}`} style={{ background: "#f1effd", ...chamfer(28, "tr") }}>
-              {/* top bar: status + map tools grouped */}
-              <div className="absolute inset-x-0 top-0 z-10 flex items-center justify-between p-4">
-                <p className="wf-sub flex items-center gap-2 rounded-full bg-white/80 px-3 py-1.5 text-[9px] font-bold backdrop-blur" style={{ color: "#373650" }}>
-                  <span className="relative inline-flex h-1.5 w-1.5">
-                    <span className="absolute inset-0 animate-ping rounded-full motion-reduce:hidden" style={{ background: LIME }} />
-                    <span className="relative h-1.5 w-1.5 rounded-full" style={{ background: "#9dc22a" }} />
-                  </span>
-                  Connected to Georgia
-                </p>
-                <div className="flex items-center gap-0.5 bg-white/90 p-1 backdrop-blur" style={chamfer(8, "br")}>
-                  {([["focus", I.pin, "Focus route"], ["world", I.globe, "World view"]] as const).map(([v, icon, label]) => (
-                    <button key={v} type="button" aria-pressed={view === v} aria-label={label} title={label}
-                      onClick={() => { animateNext.current = true; setView(v); setFocused(null); writeURL(route, v); }}
-                      className={`inline-flex h-8 w-8 items-center justify-center ${PRESS}`}
-                      style={view === v ? { background: INK, color: LIME } : { color: INK }}>{icon}</button>
-                  ))}
-                  <span className="mx-0.5 h-4 w-px" style={{ background: "#e4e1ff" }} />
-                  <button ref={expandRef} type="button" aria-label={expanded ? "Close expanded map" : "Expand map"} title={expanded ? "Close expanded map" : "Expand map"} aria-expanded={expanded}
-                    onClick={() => setExpanded((x) => !x)} className={`inline-flex h-8 w-8 items-center justify-center ${PRESS}`} style={{ color: INK }}>{expanded ? I.close : I.expand}</button>
-                </div>
-              </div>
-              <div ref={mapBoxRef} className="relative min-h-0 flex-1">
-                <svg ref={svgRef} viewBox="0 0 1000 500" preserveAspectRatio="xMidYMid meet" className="absolute inset-0 h-full w-full" role="group" aria-label={`${L(route.title)}. ${route.stops.map((s) => L(s.name)).join(" → ")}. ${COPY.note}`}>
-                  <rect x={-500} y={-300} width={2000} height={1100} fill="#f8f7ff" />
+      </div>
+
+      {/* ===== full-bleed map; on desktop the console floats over its right side, controls over the bottom-left ===== */}
+      <div className="relative mt-10 lg:mx-4 xl:mx-6">
+        {expanded && <div className="fixed inset-0 z-[65] bg-ink-950/40 backdrop-blur-[2px]" onClick={() => setExpanded(false)} aria-hidden="true" />}
+        <div ref={worldRef} data-mode={route.mode} className={`relative overflow-hidden ${expanded ? `fixed inset-3 z-[70] md:inset-8 ${SURFACE}` : "h-[64vh] min-h-[460px] lg:h-[82vh] lg:min-h-[720px] lg:max-h-[940px]"}`} style={{ background: "#f8f7ff", ...(expanded ? chamfer(28, "tr") : {}) }}>
+          <div ref={mapBoxRef} className="absolute inset-0">
+            <svg ref={svgRef} viewBox="0 0 1000 500" preserveAspectRatio="xMidYMid meet" className="absolute inset-0 h-full w-full" role="group" aria-label={`${L(route.title)}. ${route.stops.map((s) => L(s.name)).join(" → ")}. ${COPY.note}`}>
+                  <rect x={-6000} y={-4000} width={13000} height={9000} fill="#f8f7ff" />
                   <path d={GRATICULE} fill="none" stroke="#e8e5fb" strokeWidth={1} vectorEffect="non-scaling-stroke" />
                   <Countries shapes={shapes} state={countryState} onPick={selectCountry} />
                   {route.mode === "air" && (
@@ -583,10 +582,34 @@ export default function Routes() {
                     );
                   })}
                 </svg>
-                {view === "world" && <p className="wf-sub pointer-events-none absolute inset-x-0 bottom-24 text-center text-[9px] font-bold" style={{ color: "#686879" }}>Select a country to explore routes</p>}
-              </div>
+          </div>
+          {/* top-left: status + map tools */}
+          <div className="absolute left-4 top-4 z-10 flex items-center gap-2 md:left-6 md:top-6">
+            <p className="wf-sub flex items-center gap-2 rounded-full bg-white/80 px-3 py-1.5 text-[9px] font-bold backdrop-blur" style={{ color: "#373650" }}>
+                  <span className="relative inline-flex h-1.5 w-1.5">
+                    <span className="absolute inset-0 animate-ping rounded-full motion-reduce:hidden" style={{ background: LIME }} />
+                    <span className="relative h-1.5 w-1.5 rounded-full" style={{ background: "#9dc22a" }} />
+                  </span>
+                  Connected to Georgia
+                </p>
+            <div className="flex items-center gap-0.5 bg-white/90 p-1 backdrop-blur" style={chamfer(8, "br")}>
+                  {([["focus", I.pin, "Focus route"], ["world", I.globe, "World view"]] as const).map(([v, icon, label]) => (
+                    <button key={v} type="button" aria-pressed={view === v} aria-label={label} title={label}
+                      onClick={() => { animateNext.current = true; setView(v); setFocused(null); writeURL(route, v); }}
+                      className={`inline-flex h-8 w-8 items-center justify-center ${PRESS}`}
+                      style={view === v ? { background: INK, color: LIME } : { color: INK }}>{icon}</button>
+                  ))}
+                  <span className="mx-0.5 h-4 w-px" style={{ background: "#e4e1ff" }} />
+                  <button ref={expandRef} type="button" aria-label={expanded ? "Close expanded map" : "Expand map"} title={expanded ? "Close expanded map" : "Expand map"} aria-expanded={expanded}
+                    onClick={() => setExpanded((x) => !x)} className={`inline-flex h-8 w-8 items-center justify-center ${PRESS}`} style={{ color: INK }}>{expanded ? I.close : I.expand}</button>
+                </div>
+          </div>
+          {view === "world" && <p className="wf-sub pointer-events-none absolute left-0 right-0 top-20 text-center text-[9px] font-bold lg:right-[476px]" style={{ color: "#686879" }}>Select a country to explore routes</p>}
+          {/* mobile: preview chip stays on the map */}
+          <div className="absolute inset-x-3 bottom-3 z-10 lg:hidden">
+            <div className="relative">
               {/* route preview: floating chip with leg progress */}
-              <div className="absolute inset-x-3 bottom-3 z-10 flex items-center gap-3 bg-white/90 px-4 py-3 backdrop-blur" style={chamfer(14, "br")}>
+              <div className="relative flex items-center gap-3 bg-white/90 px-4 py-3 backdrop-blur" style={chamfer(14, "br")}>
                 <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center" style={{ background: INK, color: LIME }}>{modeIcon(leg.mode, "h-5 w-5")}</span>
                 <div className="min-w-0 flex-1">
                   <p className={LABEL} style={{ color: "#686879" }}>Route preview</p>
@@ -596,14 +619,30 @@ export default function Routes() {
                 <span aria-hidden="true" className="absolute inset-x-0 bottom-0 h-[2px] origin-left transition-transform duration-300 ease-out" style={{ background: PURPLE, transform: `scaleX(${pct / 100})` }} />
               </div>
             </div>
+          </div>
+        </div>
 
-            {/* transport modes: one bar */}
-            <div className={`mt-3 flex items-stretch bg-white p-1 ${SURFACE}`} style={chamfer(14, "br")}>
+        {/* dock: preview + modes + consolidation (floats bottom-left on desktop, stacks below the map on mobile) */}
+        <div ref={dockRef} className="relative z-10 mt-3 space-y-3 px-4 lg:absolute lg:bottom-6 lg:left-6 lg:mt-0 lg:w-[min(560px,calc(100%-476px-72px))] lg:px-0">
+          <div className="relative hidden lg:block">
+            {/* route preview: floating chip with leg progress */}
+              <div className="relative flex items-center gap-3 bg-white/90 px-4 py-3 backdrop-blur" style={chamfer(14, "br")}>
+                <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center" style={{ background: INK, color: LIME }}>{modeIcon(leg.mode, "h-5 w-5")}</span>
+                <div className="min-w-0 flex-1">
+                  <p className={LABEL} style={{ color: "#686879" }}>Route preview</p>
+                  <strong data-leg-name className="mt-0.5 block truncate text-sm font-semibold" style={{ color: INK }}>{first(leg.from)} — {first(leg.to)}</strong>
+                </div>
+                <span className="text-xs tabular-nums" style={{ color: "#4b4b66" }}><b style={{ color: INK }}>{String(legIndex + 1).padStart(2, "0")}</b> / {String(route.legs.length).padStart(2, "0")}</span>
+                <span aria-hidden="true" className="absolute inset-x-0 bottom-0 h-[2px] origin-left transition-transform duration-300 ease-out" style={{ background: PURPLE, transform: `scaleX(${pct / 100})` }} />
+              </div>
+          </div>
+          {/* transport modes: one bar */}
+            <div className={`flex items-stretch bg-white p-1 ${SURFACE}`} style={chamfer(14, "br")}>
               <div className="grid flex-1 grid-cols-4 gap-1">
                 {MODES.map((m) => {
                   const on = route.mode === m.key;
                   return (
-                    <button key={m.key} type="button" aria-pressed={on} onClick={() => selectMode(m.key)}
+                    <button key={m.key} type="button" aria-pressed={on} aria-label={`${m.label} · ${m.sub}`} onClick={() => selectMode(m.key)}
                       className={`relative flex min-h-[56px] items-center justify-center gap-2.5 px-2 text-left sm:justify-start sm:px-3 ${PRESS} ${on ? "" : "[@media(hover:hover)]:hover:bg-[#f3f2fd]"}`}
                       style={on ? { background: INK, color: "#fff" } : { color: INK }}>
                       <span style={{ color: on ? LIME : PURPLE }}><m.Icon className="h-5 w-5 shrink-0" /></span>
@@ -621,9 +660,8 @@ export default function Routes() {
                 {playing ? I.pause : I.play}
               </button>
             </div>
-
-            {warehouses.length > 0 && (
-              <div className="mt-3 flex flex-wrap items-center gap-3 px-1">
+          {warehouses.length > 0 && (
+              <div className="flex flex-wrap items-center gap-3 px-1">
                 <span className={LABEL} style={{ color: "#686879" }}>Consolidation stops</span>
                 {warehouses.map(({ s, i }) => (
                   <button key={i} type="button" onClick={() => { focusRouteStop(i); scrollToMap(); }}
@@ -633,10 +671,12 @@ export default function Routes() {
                 ))}
               </div>
             )}
-          </div>
+        </div>
 
-          {/* ================= route-console ================= */}
-          <section id="route-explorer" aria-labelledby="route-title" className={`min-w-0 bg-white p-6 md:p-9 ${SURFACE}`} style={chamfer(28, "tr")}>
+        {/* console: floating panel on desktop (own scroll), regular block on mobile */}
+        <section ref={panelRef} id="route-explorer" aria-labelledby="route-title"
+          className={`relative z-10 mx-4 mt-4 bg-white p-6 md:p-8 lg:absolute lg:bottom-6 lg:right-6 lg:top-6 lg:mx-0 lg:mt-0 lg:w-[440px] lg:overflow-y-auto lg:overscroll-contain lg:bg-white/95 lg:backdrop-blur-md ${SURFACE}`}
+          style={chamfer(28, "tr")}>
             <p className={LABEL} style={{ color: PURPLE }}>Explore your route</p>
             <h3 id="route-title" className="mt-3 text-[28px] leading-tight md:text-[34px]" style={{ color: INK, fontFamily: '"Loos Wide", Inter, sans-serif', fontWeight: 500, letterSpacing: "-0.02em" }}>{A(L(route.title))}</h3>
 
@@ -807,7 +847,6 @@ export default function Routes() {
             </div>
             <p id="route-note" className="mt-6 text-[11px] leading-5" style={{ color: "#8a89a3" }}>{COPY.note}{route.mode === "air" ? " " + COPY.airNote : ""}</p>
           </section>
-        </div>
       </div>
     </section>
   );
