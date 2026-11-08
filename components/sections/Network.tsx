@@ -46,7 +46,7 @@ function Grid({ label, items, cols }: { label: string; items: { src: string; nam
             <Plus className="-right-[6px] -top-[6px]" />
             <Plus className="-bottom-[6px] -left-[6px]" />
             <Plus className="-bottom-[6px] -right-[6px]" />
-            <span aria-hidden="true" className="absolute inset-x-0 -top-px h-px origin-left scale-x-0 bg-[#644ff2] transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-x-100" />
+            <span aria-hidden="true" className="absolute inset-x-0 -top-px h-px origin-left scale-x-0 bg-[#d5f476] transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-x-100" />
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={`/assets/logos/${it.src}.webp`} alt={it.name} loading="lazy"
               className="max-h-10 w-auto max-w-[78%] object-contain opacity-55 grayscale transition-[filter,opacity] duration-300 group-hover:opacity-100 group-hover:grayscale-0 md:max-h-12" />
