@@ -1,6 +1,6 @@
 "use client";
 
-import { chamfer } from "@/components/brand/design-system";
+import { chamfer, WMark, Wordmark } from "@/components/brand/design-system";
 
 // Contact details as published on weforward.ge.
 const NAVY = "#04042b";
@@ -39,6 +39,41 @@ function scrollToTop() {
     if (p < 1) raf = requestAnimationFrame(step); else stop();
   };
   raf = requestAnimationFrame(step);
+}
+
+// Branded containers parked along the bottom edge (AI-rendered blank boxes, real logo overlaid in code).
+const BOXES = [
+  { src: "purple40", w: 1222, mark: "#ffffff", word: "#ffffff", lift: 10 },
+  { src: "white20", w: 728, mark: "#644ff2", word: "#04042b", lift: 0 },
+  { src: "lime20", w: 738, mark: "#04042b", word: "#04042b", lift: 18 },
+  { src: "purple20", w: 822, mark: "#ffffff", word: "#ffffff", lift: 4 },
+  { src: "white20", w: 728, mark: "#644ff2", word: "#04042b", lift: 14 },
+  { src: "purple40", w: 1222, mark: "#ffffff", word: "#ffffff", lift: 0 },
+  { src: "lime20", w: 738, mark: "#04042b", word: "#04042b", lift: 8 },
+];
+const BOX_H = 300; // source image height
+
+function ContainerRow() {
+  const row = BOXES.map((b, i) => (
+    <div key={i} className="group/box relative shrink-0 transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-5"
+      style={{ height: "var(--box-h)", width: `calc(var(--box-h) * ${b.w / BOX_H})`, marginTop: b.lift }}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={`/assets/containers/${b.src}.webp`} alt="" draggable={false} className="absolute inset-0 h-full w-full select-none" />
+      <div className="absolute inset-0 flex flex-col items-center justify-start gap-[6%] pt-[13%]">
+        <WMark className="h-[30%] w-auto" color={b.mark} />
+        <Wordmark className="h-[11%] w-auto" color={b.word} />
+      </div>
+    </div>
+  ));
+  return (
+    <div aria-hidden="true" className="relative mt-6 h-[110px] overflow-hidden [--box-h:140px] md:h-[150px] md:[--box-h:190px]">
+      {/* two copies side by side, sliding by one copy's width = seamless loop; pauses on hover */}
+      <div className="wf-marquee flex w-max hover:[animation-play-state:paused]">
+        <div className="flex gap-6 pr-6">{row}</div>
+        <div className="flex gap-6 pr-6">{row}</div>
+      </div>
+    </div>
+  );
 }
 
 function Col({ title, children }: { title: string; children: React.ReactNode }) {
@@ -86,7 +121,7 @@ export default function Footer() {
         </div>
 
         {/* bottom bar */}
-        <div className="mt-20 flex flex-wrap items-center justify-between gap-4 border-t border-white/10 pb-10 pt-6 text-[13px] text-white/45">
+        <div className="mt-20 flex flex-wrap items-center justify-between gap-4 border-t border-white/10 pb-4 pt-6 text-[13px] text-white/45">
           <span>© {new Date().getFullYear()} WEFORWARD LLC. All rights reserved.</span>
           <button type="button" onClick={scrollToTop}
             className="group inline-flex items-center gap-3 text-[13px] text-white/60 outline-none transition-colors duration-200 hover:text-white focus-visible:text-white">
@@ -99,7 +134,7 @@ export default function Footer() {
           </button>
         </div>
       </div>
-
+      <ContainerRow />
     </footer>
   );
 }

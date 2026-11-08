@@ -128,3 +128,8 @@
 /* route-map stops: no browser focus box; keyboard focus gets a brand ring on the marker */
 [data-stop] { outline: none; }
 [data-stop]:focus-visible > g > circle:first-of-type { stroke: #644ff2; stroke-width: 3; }
+
+/* Footer container row: seamless horizontal loop (track holds two identical copies). */
+@keyframes wf-marquee { to { transform: translateX(-50%); } }
+.wf-marquee { animation: wf-marquee 60s linear infinite; }
+@media (prefers-reduced-motion: reduce) { .wf-marquee { animation: none; } }
