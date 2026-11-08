@@ -161,7 +161,8 @@ export default function FactsGlobe({ progress, reduce }: { progress: MotionValue
       if (!needsRender && reduce) return;
 
       // fit: radius in screen ~ 0.36 of min(w,h) at the end, ~1.1 of width at the start
-      const k = easeOut(range(p, 0.05, 0.7));
+      const rise = easeOut(range(p, 0.22, 0.45)); // comes up from below the panel to the wordmark
+      const k = easeOut(range(p, 0.45, 0.85)); // then rotates and shrinks into a full sphere
       const fitEnd = 0.29 * Math.min(w, h * 1.15);
       const fitStart = Math.min((w < 768 ? 0.55 : 0.32) * w, 0.7 * h); // Emons-like start: moderate globe under the figures
       const pxRadius = lerp(fitStart, fitEnd, k);
@@ -173,13 +174,15 @@ export default function FactsGlobe({ progress, reduce }: { progress: MotionValue
       // keep the globe's top touching the WEFORWARD wordmark (Facts.tsx: top 8vh, width 60vw / 82vw, viewBox 992×100)
       const wordmarkH = ((w < 768 ? 0.72 : 0.5) * window.innerWidth * 100) / 992;
       const wordmarkBottom = h * 0.08 + wordmarkH;
-      const touchPx = h / 2 - wordmarkBottom - pxRadius + wordmarkH * 0.2; // tucks slightly under the letters // centre offset from panel middle (up = +)
-      globe.position.y = touchPx * worldPerPx;
+      const lift = wordmarkH * 0.2; // tucks slightly under the letters
+      const touchPx = h / 2 - wordmarkBottom - pxRadius + lift; // centre offset from panel middle (up = +)
+      const belowPx = h - (wordmarkBottom - lift) + 24; // distance that puts the globe top just below the panel
+      globe.position.y = (touchPx - (1 - rise) * belowPx) * worldPerPx;
 
       globe.rotation.x = 0.42; // show the northern hemisphere
       spin.rotation.y = lerp(startRot, endRot, k) + (reduce ? 0 : Math.sin(tSec * 0.25) * 0.12); // gentle sway, never drifts away from Tbilisi
 
-      const f = easeOut(range(p, 0.4, 0.75));
+      const f = easeOut(range(p, 0.78, 0.95));
       purple.opacity = f;
       lime.opacity = f;
       ringMat.opacity = f;
