@@ -4,6 +4,7 @@ import Facts from "@/components/sections/Facts";
 import Services from "@/components/sections/Services";
 import Tracking from "@/components/sections/Tracking";
 import Network from "@/components/sections/Network";
+import Contact from "@/components/sections/Contact";
 import Routes from "@/components/sections/Routes";
 
 export default function Page() {
@@ -15,5 +16,6 @@ export default function Page() {
     <Services />
     <Network />
     <Tracking />
+    <Contact />
   </main>;
 }
