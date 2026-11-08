@@ -161,8 +161,7 @@ export default function FactsGlobe({ progress, reduce }: { progress: MotionValue
       if (!needsRender && reduce) return;
 
       // fit: radius in screen ~ 0.36 of min(w,h) at the end, ~1.1 of width at the start
-      const rise = easeOut(range(p, 0.0, 0.3)); // comes up from below the panel to the wordmark
-      const k = easeOut(range(p, 0.3, 0.8)); // then rotates and shrinks into a full sphere
+      const k = easeOut(range(p, 0.05, 0.7)); // rotates and shrinks into a full sphere
       const fitEnd = 0.29 * Math.min(w, h * 1.15);
       const fitStart = Math.min((w < 768 ? 0.55 : 0.32) * w, 0.7 * h); // Emons-like start: moderate globe under the figures
       const pxRadius = lerp(fitStart, fitEnd, k);
@@ -176,13 +175,12 @@ export default function FactsGlobe({ progress, reduce }: { progress: MotionValue
       const wordmarkBottom = h * 0.08 + wordmarkH;
       const lift = wordmarkH * 0.2; // tucks slightly under the letters
       const touchPx = h / 2 - wordmarkBottom - pxRadius + lift; // centre offset from panel middle (up = +)
-      const belowPx = h - (wordmarkBottom - lift) + 24; // distance that puts the globe top just below the panel
-      globe.position.y = (touchPx - (1 - rise) * belowPx) * worldPerPx;
+      globe.position.y = touchPx * worldPerPx;
 
       globe.rotation.x = 0.42; // show the northern hemisphere
       spin.rotation.y = lerp(startRot, endRot, k) + (reduce ? 0 : Math.sin(tSec * 0.25) * 0.12); // gentle sway, never drifts away from Tbilisi
 
-      const f = easeOut(range(p, 0.75, 0.95));
+      const f = easeOut(range(p, 0.4, 0.75));
       purple.opacity = f;
       lime.opacity = f;
       ringMat.opacity = f;

@@ -7,8 +7,8 @@ import { Wordmark } from "@/components/brand/design-system";
 
 /* Pinned globe scene.
    - While the section scrolls into view, WEFORWARD rises from below (masked), so it moves as soon as you scroll.
-   - Once pinned (progress 0..1): 0.00–0.30 the globe rises to the wordmark, 0.30–0.80 rotates and shrinks,
-     0.75–0.95 locations and routes into Tbilisi fade in (FactsGlobe). */
+   - Once pinned (progress 0..1): the globe, already touching the wordmark, rotates and shrinks 0.05–0.70;
+     locations and routes into Tbilisi fade in 0.40–0.75 (FactsGlobe). */
 
 export default function Facts() {
   const reduce = !!useReducedMotion();
