@@ -170,7 +170,7 @@ export default function FactsGlobe({ progress, reduce }: { progress: MotionValue
       camera.lookAt(0, 0, 0);
       // vertical: globe centre starts ~1 radius below the panel bottom, ends just below centre
       const worldPerPx = (2 * Math.tan((camera.fov * Math.PI) / 360) * dist) / h;
-      const yStartPx = h * 0.4 - pxRadius; // globe top near the panel top so it shows as soon as the section enters
+      const yStartPx = h * 0.18 - pxRadius; // globe top just under the WEFORWARD wordmark
       const yEndPx = 0;
       globe.position.y = lerp(yStartPx, yEndPx, k) * worldPerPx;
 
