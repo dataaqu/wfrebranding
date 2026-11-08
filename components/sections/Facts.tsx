@@ -8,7 +8,7 @@ import { Wordmark } from "@/components/brand/design-system";
 /* Pinned globe scene.
    - While the section scrolls into view, WEFORWARD slides down out from under the hero and settles above the globe.
    - Once pinned (progress 0..1): the globe, already touching the wordmark, rotates and shrinks 0.05–0.70;
-     logistics-hub dots and the Tbilisi marker fade in 0.40–0.75 (FactsGlobe). */
+     Georgia lights up in phosphor lime 0.40–0.75 (FactsGlobe). */
 
 export default function Facts() {
   const reduce = !!useReducedMotion();

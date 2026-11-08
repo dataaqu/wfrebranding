@@ -7,41 +7,13 @@ import * as THREE from "three";
 /* Scroll-driven WebGL globe for the Facts scene (Emons-style).
    `progress` is the pinned section's scroll progress 0..1:
      0.00–0.70  globe rises from below the panel and shrinks into a full sphere, rotating east
-     0.40–0.75  logistics-hub dots and the Tbilisi marker fade in
+     0.40–0.75  Georgia lights up in phosphor lime
    Texture: NASA Blue Marble + clouds (public domain), recoloured to brand duotone → /assets/earth-brand.jpg */
 
 const R = 1;
 const TBILISI: [number, number] = [41.72, 44.79];
-// One main logistics hub per large country, [lat, lon] (Georgia = the Tbilisi marker)
-const HUBS: [number, number][] = [
-  [31.23, 121.47], // China — Shanghai
-  [35.68, 139.69], // Japan — Tokyo
-  [35.1, 129.04], // South Korea — Busan
-  [1.29, 103.85], // Singapore
-  [18.95, 72.95], // India — Mumbai
-  [25.01, 55.06], // UAE — Jebel Ali
-  [21.49, 39.19], // Saudi Arabia — Jeddah
-  [44.2, 80.4], // Kazakhstan — Khorgos
-  [41.0, 28.97], // Türkiye — Istanbul
-  [55.75, 37.62], // Russia — Moscow
-  [53.55, 9.99], // Germany — Hamburg
-  [51.92, 4.48], // Netherlands — Rotterdam
-  [51.96, 1.35], // UK — Felixstowe
-  [49.49, 0.11], // France — Le Havre
-  [39.47, -0.38], // Spain — Valencia
-  [44.41, 8.93], // Italy — Genoa
-  [31.26, 32.3], // Egypt — Port Said
-  [35.89, -5.5], // Morocco — Tanger Med
-  [6.45, 3.39], // Nigeria — Lagos
-  [-4.04, 39.67], // Kenya — Mombasa
-  [-29.86, 31.02], // South Africa — Durban
-  [33.74, -118.27], // USA — Los Angeles
-  [49.28, -123.12], // Canada — Vancouver
-  [19.05, -104.31], // Mexico — Manzanillo
-  [-23.96, -46.33], // Brazil — Santos
-  [-34.6, -58.38], // Argentina — Buenos Aires
-  [-33.87, 151.21], // Australia — Sydney
-];
+// Georgia's border, [lon, lat] (Natural Earth via johan/world.geo.json, public domain)
+const GEORGIA: [number, number][] = [[41.554, 41.536], [41.703, 41.963], [41.453, 42.645], [40.875, 43.014], [40.321, 43.129], [39.955, 43.435], [40.077, 43.553], [40.922, 43.382], [42.394, 43.220], [43.756, 42.741], [43.931, 42.555], [44.538, 42.712], [45.470, 42.503], [45.776, 42.092], [46.405, 41.861], [46.145, 41.723], [46.638, 41.182], [46.502, 41.064], [45.963, 41.124], [45.217, 41.411], [44.972, 41.248], [43.583, 41.092], [42.620, 41.583]];
 
 const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
 const range = (p: number, a: number, b: number) => clamp01((p - a) / (b - a));
@@ -89,29 +61,38 @@ export default function FactsGlobe({ progress, reduce }: { progress: MotionValue
     const earth = new THREE.Mesh(new THREE.SphereGeometry(R, 96, 96), new THREE.MeshLambertMaterial({ map: tex }));
     spin.add(earth);
 
-    // overlays (fade in late)
-    const dotGeo = new THREE.SphereGeometry(0.016, 16, 16);
-    const purple = new THREE.MeshBasicMaterial({ color: 0x644ff2, transparent: true, opacity: 0 });
-    HUBS.forEach(([lat, lon]) => {
-      const m = new THREE.Mesh(dotGeo, purple);
-      m.position.copy(toVec(lat, lon, R * 1.004));
-      spin.add(m);
-    });
-    const lime = new THREE.MeshBasicMaterial({ color: 0xd5f476, transparent: true, opacity: 0 });
-    const tb = new THREE.Mesh(new THREE.SphereGeometry(0.03, 24, 24), lime);
-    tb.position.copy(toVec(...TBILISI, R * 1.006));
-    spin.add(tb);
-    const ringMat = new THREE.MeshBasicMaterial({ color: 0x04042b, transparent: true, opacity: 0, side: THREE.DoubleSide });
-    const tbRing = new THREE.Mesh(new THREE.RingGeometry(0.034, 0.042, 40), ringMat);
-    tbRing.position.copy(toVec(...TBILISI, R * 1.007));
-    tbRing.lookAt(toVec(...TBILISI, 2));
-    spin.add(tbRing);
-    const pulseMat = new THREE.MeshBasicMaterial({ color: 0xd5f476, transparent: true, opacity: 0, side: THREE.DoubleSide });
-    const pulse = new THREE.Mesh(new THREE.RingGeometry(0.04, 0.05, 40), pulseMat);
-    pulse.position.copy(tbRing.position);
-    pulse.lookAt(toVec(...TBILISI, 2));
-    spin.add(pulse);
-
+    // Georgia: country shape in phosphor lime, with a soft glow (fades in late)
+    const LIME = 0xd5f476;
+    const contour = GEORGIA.map(([lon, lat]) => new THREE.Vector2(lon, lat));
+    const tris = THREE.ShapeUtils.triangulateShape(contour, []);
+    const shapeGeo = new THREE.BufferGeometry();
+    shapeGeo.setAttribute("position", new THREE.Float32BufferAttribute(GEORGIA.flatMap(([lon, lat]) => toVec(lat, lon, R * 1.003).toArray()), 3));
+    shapeGeo.setIndex(tris.flat());
+    const fillMat = new THREE.MeshBasicMaterial({ color: LIME, transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false });
+    const fill = new THREE.Mesh(shapeGeo, fillMat);
+    fill.renderOrder = 2; // drawn over the glow
+    spin.add(fill);
+    const edgeMat = new THREE.LineBasicMaterial({ color: 0x7f9f12, transparent: true, opacity: 0 });
+    const edge = new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(GEORGIA.map(([lon, lat]) => toVec(lat, lon, R * 1.004))), edgeMat);
+    edge.renderOrder = 3;
+    spin.add(edge);
+    // glow: radial-gradient sprite centred on Georgia
+    const gc = document.createElement("canvas");
+    gc.width = gc.height = 128;
+    const g2 = gc.getContext("2d")!;
+    const grad = g2.createRadialGradient(64, 64, 0, 64, 64, 64);
+    grad.addColorStop(0, "rgba(213,244,118,1)");
+    grad.addColorStop(0.3, "rgba(213,244,118,0.7)");
+    grad.addColorStop(1, "rgba(213,244,118,0)");
+    g2.fillStyle = grad;
+    g2.fillRect(0, 0, 128, 128);
+    const glowTex = new THREE.CanvasTexture(gc);
+    const glowMat = new THREE.SpriteMaterial({ map: glowTex, transparent: true, opacity: 0, depthWrite: false, depthTest: false }) // Georgia always faces the camera here;
+    const glow = new THREE.Sprite(glowMat);
+    glow.position.copy(toVec(42.2, 43.5, R * 1.02));
+    glow.scale.setScalar(0.32);
+    glow.renderOrder = 1;
+    spin.add(glow);
 
     let w = 0, h = 0, needsRender = true, visible = true, raf = 0;
     const resize = () => {
@@ -130,7 +111,7 @@ export default function FactsGlobe({ progress, reduce }: { progress: MotionValue
     io.observe(host);
     const unsub = progress.on("change", () => { needsRender = true; });
 
-    const endRot = faceLon(TBILISI[1] + 22); // Tbilisi slightly left of centre so China routes show
+    const endRot = faceLon(TBILISI[1] + 22); // Georgia slightly left of centre
     const startRot = endRot + 1.1;
     const t0 = performance.now();
 
@@ -159,15 +140,14 @@ export default function FactsGlobe({ progress, reduce }: { progress: MotionValue
       globe.position.y = touchPx * worldPerPx;
 
       globe.rotation.x = 0.42; // show the northern hemisphere
-      spin.rotation.y = lerp(startRot, endRot, k) + (reduce ? 0 : Math.sin(tSec * 0.25) * 0.12); // gentle sway, never drifts away from Tbilisi
+      spin.rotation.y = lerp(startRot, endRot, k) + (reduce ? 0 : Math.sin(tSec * 0.25) * 0.12); // gentle sway, never drifts away from Georgia
 
       const f = easeOut(range(p, 0.4, 0.75));
-      purple.opacity = f;
-      lime.opacity = f;
-      ringMat.opacity = f;
-      const pp = (tSec % 2) / 2;
-      pulse.scale.setScalar(1 + pp * 1.8);
-      pulseMat.opacity = reduce ? 0 : f * (1 - pp) * 0.9;
+      fillMat.opacity = f;
+      edgeMat.opacity = f;
+      const breathe = reduce ? 0.75 : 0.6 + 0.4 * Math.sin(tSec * 2.2); // phosphor glow
+      glowMat.opacity = f * breathe;
+      glow.scale.setScalar(0.36 + 0.1 * breathe);
 
       renderer.render(scene, camera);
       needsRender = false;
