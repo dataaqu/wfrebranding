@@ -378,8 +378,8 @@ export default function Routes() {
       // keep the route out of the faded edges (10% sides, 14% top/bottom) as well as from under the floating UI
       const fadeX = expanded ? 0 : width * 0.1, fadeY = expanded ? 0 : height * 0.14;
       insets.current = desk
-        ? { left: fadeX, top: Math.max(72, fadeY), right: panelW + 48, bottom: Math.max(dockH + 32, fadeY) }
-        : { left: fadeX * 0.6, top: Math.max(56, fadeY), right: fadeX * 0.6, bottom: Math.max(96, fadeY) };
+        ? { left: fadeX, top: fadeY, right: panelW + 48, bottom: Math.max(dockH + 32, fadeY) }
+        : { left: fadeX * 0.6, top: fadeY, right: fadeX * 0.6, bottom: Math.max(96, fadeY) };
       const ins = insets.current, visW = Math.max(200, width - ins.left - ins.right), visH = Math.max(160, height - ins.top - ins.bottom);
       let vb: Box;
       if (view === "focus") vb = focusBox(route, focused, visW, visH);
@@ -500,9 +500,8 @@ export default function Routes() {
       <div className="mx-auto max-w-6xl px-6 md:px-10">
         <div className="flex flex-wrap items-end justify-between gap-6">
           <Reveal id="routes-head">
-            <p className={LABEL} style={{ color: PURPLE }}>Routes / Road · Sea · Rail · Air</p>
             <h2 className="sr-only">Your route. In focus.</h2>
-            <div aria-hidden="true" className="mt-4">
+            <div aria-hidden="true">
               <div className="wf-head text-5xl md:text-7xl" style={{ color: INK }}>Your route.</div>
               <div className="wf-head text-5xl md:text-7xl" style={{ color: PURPLE }}>In focus.</div>
             </div>
@@ -592,27 +591,6 @@ export default function Routes() {
                     );
                   })}
                 </svg>
-          </div>
-          {/* top-left: status + map tools */}
-          <div className="absolute left-4 top-4 z-10 flex items-center gap-2 md:left-6 md:top-6">
-            <p className="wf-sub flex items-center gap-2 rounded-full bg-white/80 px-3 py-1.5 text-[9px] font-bold backdrop-blur" style={{ color: "#373650" }}>
-                  <span className="relative inline-flex h-1.5 w-1.5">
-                    <span className="absolute inset-0 animate-ping rounded-full motion-reduce:hidden" style={{ background: LIME }} />
-                    <span className="relative h-1.5 w-1.5 rounded-full" style={{ background: "#9dc22a" }} />
-                  </span>
-                  Connected to Georgia
-                </p>
-            <div className="flex items-center gap-0.5 bg-white/90 p-1 backdrop-blur" style={chamfer(8, "br")}>
-                  {([["focus", I.pin, "Focus route"], ["world", I.globe, "World view"]] as const).map(([v, icon, label]) => (
-                    <button key={v} type="button" aria-pressed={view === v} aria-label={label} title={label}
-                      onClick={() => { animateNext.current = true; setView(v); setFocused(null); writeURL(route, v); }}
-                      className={`inline-flex h-8 w-8 items-center justify-center ${PRESS}`}
-                      style={view === v ? { background: INK, color: LIME } : { color: INK }}>{icon}</button>
-                  ))}
-                  <span className="mx-0.5 h-4 w-px" style={{ background: "#e4e1ff" }} />
-                  <button ref={expandRef} type="button" aria-label={expanded ? "Close expanded map" : "Expand map"} title={expanded ? "Close expanded map" : "Expand map"} aria-expanded={expanded}
-                    onClick={() => setExpanded((x) => !x)} className={`inline-flex h-8 w-8 items-center justify-center ${PRESS}`} style={{ color: INK }}>{expanded ? I.close : I.expand}</button>
-                </div>
           </div>
           {view === "world" && <p className="wf-sub pointer-events-none absolute left-0 right-0 top-20 text-center text-[9px] font-bold lg:right-[476px]" style={{ color: "#686879" }}>Select a country to explore routes</p>}
           {/* mobile: preview chip stays on the map */}
