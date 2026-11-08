@@ -488,7 +488,7 @@ export default function Routes() {
   const pct = Math.round(((legIndex + 1) / route.legs.length) * 100);
 
   return (
-    <section id="routes" className="relative pb-24 pt-4 md:pt-6" style={{ background: "#f8f7ff", color: INK }}>
+    <section id="routes" className="relative pb-16 pt-4 md:pt-6" style={{ background: "#f8f7ff", color: INK }}>
       {/* rounded transition: a dome of the section colour rising behind the globe (Facts sits on a higher layer) */}
       <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 bottom-full h-[22vw] overflow-hidden">
         <div className="absolute left-1/2 top-0 h-[60vw] w-[125vw] -translate-x-1/2 rounded-[50%]" style={{ background: "#f8f7ff" }} />
@@ -774,55 +774,6 @@ export default function Routes() {
         </div>
       </div>
 
-      {/* ===== 3. what happens: details, stages, progress ===== */}
-      <div className="mx-auto mt-2 max-w-6xl px-6 md:px-10">
-        <div className={`bg-white p-5 md:p-6 ${SURFACE}`} style={chamfer(24, "br")}>
-          <div className="flex items-start gap-3">
-              {route.load && <span className="wf-sub shrink-0 px-2 py-1 text-[10px] font-bold" style={{ background: LIME, color: INK }}>{route.mode === "rail" ? "Rail " : ""}{route.load}</span>}
-              <p data-details className="text-xs leading-5" style={{ color: "#4b4b66" }}>{A(L(route.details))}</p>
-            </div>
-          <div className="mt-5 border-t pt-4" style={{ borderColor: "#ecebf8" }}>
-            <details className="group/stages" open>
-              <summary className="flex cursor-pointer list-none items-center justify-between py-4 [&::-webkit-details-marker]:hidden">
-                <span className={LABEL} style={{ color: INK }}>Route stages · {route.stops.length}</span>
-                <span className="transition-transform duration-200 ease-out group-open/stages:rotate-180" style={{ color: PURPLE }}>{I.caret}</span>
-              </summary>
-              <div className="flex gap-1.5">
-                <button type="button" onClick={() => { elapsed.current = 0; setPaused(false); draw(); }} className={`inline-flex items-center gap-2 bg-[#f3f2fd] px-3 py-2 text-xs ${PRESS}`} style={{ color: INK }}>{I.replay}Replay route</button>
-                <button type="button" aria-pressed={playing} aria-label={motionLabel} onClick={() => setPaused((p) => !p)} className={`inline-flex items-center justify-center bg-[#f3f2fd] px-3 py-2 ${PRESS}`} style={{ color: PURPLE }}>{playing ? I.pause : I.play}</button>
-              </div>
-              <ol className="relative mt-5 flex gap-3 overflow-x-auto pb-4">
-                {route.stops.map((s, i) => {
-                  const cur = i === legIndex, done = i < legIndex;
-                  return (
-                    <li key={i} className="min-w-[128px] flex-1">
-                      <button type="button" aria-label={`${i + 1}. ${L(s.name)}`} aria-current={cur ? "step" : undefined} onClick={() => { focusRouteStop(i); scrollToMap(); }} className="group w-full text-left">
-                        <span className="flex items-center">
-                          <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold tabular-nums transition-[background-color,color,box-shadow] duration-200 ease-out"
-                            style={cur ? { background: PURPLE, color: "#fff", boxShadow: `0 0 0 4px ${PURPLE}22` } : done ? { background: INK, color: LIME } : { background: "#f3f2fd", color: "#686879" }}>{String(i + 1).padStart(2, "0")}</span>
-                          {i < route.stops.length - 1 && <span className="ml-2 h-[2px] flex-1 transition-colors duration-300" style={{ background: done ? INK : "#ecebf8" }} />}
-                        </span>
-                        <strong className="mt-3 block text-[13px] font-semibold leading-snug" style={{ color: INK }}>{L(s.name)}</strong>
-                        {s.kind && <em className="mt-0.5 block text-[11px] not-italic" style={{ color: PURPLE }}>{COPY[s.kind]}</em>}
-                        {i < route.legs.length
-                          ? <small className="mt-1.5 inline-flex items-center gap-1.5 text-[11px]" style={{ color: "#686879" }}>{modeIcon(route.legs[i].mode, "h-3.5 w-3.5")}{COPY[route.legs[i].mode]}</small>
-                          : <small className="mt-1.5 inline-flex items-center gap-1.5 text-[11px]" style={{ color: "#686879" }}>{I.check}{COPY[route.mode === "air" && route.options.direction === "export" ? "arrival" : "gateway"]}</small>}
-                      </button>
-                    </li>
-                  );
-                })}
-              </ol>
-            </details>
-          </div>
-          <div className="mt-4 flex items-center gap-4">
-              <input id="route-progress" ref={progressRef} type="range" min={0} max={100} step={0.1} defaultValue={0} aria-label="Preview progress"
-                onInput={(e) => { setPaused(true); elapsed.current = Math.min(total - 0.001, (total * Number((e.target as HTMLInputElement).value)) / 100); draw(); }}
-                className="wf-range h-1 w-full cursor-pointer appearance-none bg-[#ecebf8] accent-brand-500" />
-              <output ref={outputRef} htmlFor="route-progress" className="w-10 text-right text-xs tabular-nums" style={{ color: "#4b4b66" }}>0%</output>
-            </div>
-          <p id="route-note" className="mt-6 text-[11px] leading-5" style={{ color: "#8a89a3" }}>{COPY.note}{route.mode === "air" ? " " + COPY.airNote : ""}</p>
-        </div>
-      </div>
     </section>
   );
 }
