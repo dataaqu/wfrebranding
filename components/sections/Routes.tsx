@@ -203,6 +203,7 @@ export default function Routes() {
   const [view, setView] = useState<"focus" | "world">("focus");
   const [focused, setFocused] = useState<number | null>(null);
   const [expanded, setExpanded] = useState(false);
+  const [regionsOpen, setRegionsOpen] = useState(false);
   const [paused, setPaused] = useState(false);
   const [legIndex, setLegIndex] = useState(0);
   const animateNext = useRef(false);
@@ -668,7 +669,7 @@ export default function Routes() {
               </label>
             ))}
             {cardFields.map((f) => (
-              <fieldset key={f.key} className="min-w-0 flex-1 basis-[420px]">
+              <fieldset key={f.key} className="w-full min-w-0">
                 <legend className={LABEL} style={{ color: "#686879" }}>{L(f.label)}</legend>
                 <div role="group" aria-label={L(f.label)} className="mt-2 grid gap-2 sm:grid-cols-3">
                   {f.options.map((o) => {
@@ -688,21 +689,31 @@ export default function Routes() {
             ))}
           </div>
           <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-            <details className="group/regions">
-              <summary className="inline-flex cursor-pointer list-none items-center gap-2 py-1 [&::-webkit-details-marker]:hidden">
+            <div className="w-full">
+              <button type="button" aria-expanded={regionsOpen} aria-controls="route-regions" onClick={() => setRegionsOpen((o) => !o)}
+                className="inline-flex items-center gap-2 py-1 outline-none focus-visible:ring-2 focus-visible:ring-brand-500">
                 <span className={LABEL} style={{ color: INK }}>Browse regions & corridors</span>
-                <span className="transition-transform duration-200 ease-out group-open/regions:rotate-180" style={{ color: PURPLE }}>{I.caret}</span>
-              </summary>
-              <div role="group" aria-label="Select a country or region" className="flex flex-wrap gap-1.5 pt-3">
-                {regionButtons.map((r) => (
-                  <button key={r.id} type="button" aria-pressed={r.id === region} onClick={() => { selectRegion(r.id); scrollToMap(); }}
-                    className={`rounded-full px-3 py-1.5 text-xs ${PRESS} ${r.id === region ? "" : "[@media(hover:hover)]:hover:bg-[#e9e6fc]"}`}
-                    style={r.id === region ? { background: INK, color: "#fff" } : { background: "#f3f2fd", color: INK }}>
-                    {L(r.label)}{r.transit && route.mode !== "air" ? <small className="ml-1 opacity-60">Transit</small> : null}
-                  </button>
-                ))}
+                <span className={`transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${regionsOpen ? "rotate-180" : ""}`} style={{ color: PURPLE }}>{I.caret}</span>
+              </button>
+              {/* grid-rows 0fr→1fr animates to the content's natural height */}
+              <div id="route-regions" inert={!regionsOpen}
+                className={`grid transition-[grid-template-rows,opacity] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none ${regionsOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}>
+                <div className="overflow-hidden">
+                  <div role="group" aria-label="Select a country or region" className={`flex flex-wrap gap-1.5 pt-3 transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${regionsOpen ? "translate-y-0" : "-translate-y-2"}`}>
+                    {regionButtons.map((r) => {
+                      const on = r.id === region;
+                      return (
+                        <button key={r.id} type="button" aria-pressed={on} onClick={() => { selectRegion(r.id); scrollToMap(); }}
+                          className={`h-9 px-3.5 text-[13px] ${PRESS} ${on ? "font-semibold" : "ring-1 ring-inset ring-[#e9e7f7] [@media(hover:hover)]:hover:bg-[#ecebfc]"}`}
+                          style={on ? { background: INK, color: "#fff" } : { background: "#f6f5fc", color: "#4b4b66" }}>
+                          {L(r.label)}{r.transit && route.mode !== "air" ? <small className="ml-1 opacity-60">Transit</small> : null}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
-            </details>
+            </div>
             {route.mode === "air" && (
               <div className="flex items-center gap-3 px-4 py-2.5" style={{ background: INK, ...chamfer(12, "br") }}>
                 <span style={{ color: LIME }}><IconPlane className="h-5 w-5" /></span>
