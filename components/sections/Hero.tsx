@@ -1,18 +1,15 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { AnimatePresence, animate, motion, useReducedMotion } from "motion/react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useIntroDone } from "@/lib/intro";
 import { LogoHorizontal, WMark, chamfer, Button, IconPlane, IconShip, IconTrain, IconTruck, IconDoc, IconContainer, IconShield, IconClock, IconArrow } from "@/components/brand/design-system";
 import { SERIES, MILESTONES, KPIS, AXIS_MAX, SIDEBAR } from "@/data/landing";
 
 const EASE = [0.16, 1, 0.3, 1] as const;
-// macOS-style genie: while animating, the window is drawn as GENIE_STRIPS horizontal slices of itself.
-// Each slice is narrowed to the width of a funnel at its current height and slid up into the Open
-// button, so the content itself bends (not just the outline). Slices exist only during the animation.
-const GENIE_STRIPS = 150;
-const clamp01 = (x: number) => Math.min(1, Math.max(0, x));
-const smooth = (x: number) => { const c = clamp01(x); return c * c * (3 - 2 * c); };
+// TMS window open/close: one element folds on its top edge in 3D (transform + opacity only, GPU-cheap).
+const FOLD_OPEN = { rotateX: 0, scale: 1, y: 0, opacity: 1 };
+const FOLD_SHUT = { rotateX: -78, scale: 0.88, y: -12, opacity: 0 };
 // Placeholder until real TMS screens are ready; flip to true to show the mock dashboard again.
 const SHOW_TMS_MOCK = false;
 
@@ -27,46 +24,7 @@ export default function Hero() {
   const [minimized, setMinimized] = useState(false);
   const [zoomed, setZoomed] = useState(false);
   const collapsed = closed || minimized;
-  const [genie, setGenie] = useState<null | "open" | "close">(null);
-  const stripsRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const el = stripsRef.current;
-    if (!genie || !el) return;
-    const strips = Array.from(el.children) as HTMLElement[];
-    const W = el.offsetWidth, H = el.offsetHeight, h = Math.ceil(H / GENIE_STRIPS); // whole-pixel slices: no resampled seams
-    const slot = Math.min(230, W * 0.22); // width of the throat at the top (≈ the Open button)
-    // exact pixel slices with 1px overlap (no hairline seams)
-    strips.forEach((st, i) => {
-      st.style.top = `${i * h}px`; st.style.height = `${h + 1}px`;
-      (st.firstElementChild as HTMLElement).style.top = `${-i * h}px`;
-    });
-    const widthAt = (y: number, funnel: number) => {
-      const throat = slot + (W - slot) * Math.pow(smooth(Math.max(0, y) / (H * 0.9)), 0.85);
-      return 1 + (throat / W - 1) * funnel; // fraction of full width
-    };
-    const apply = (p: number) => {
-      const funnel = smooth(p / 0.4);                                   // sides bend in first…
-      const slide = Math.pow(clamp01((p - 0.18) / 0.82), 1.55) * (H + h); // …then the content pours up the throat
-      const dy = Math.round(slide);
-      for (let i = 0; i < strips.length; i++) {
-        const top = i * h - slide, bot = top + h;
-        if (bot < 0) { strips[i].style.transform = "scaleX(0)"; continue; }
-        const kt = widthAt(top, funnel), kb = widthAt(bot, funnel), k = Math.max(kt, kb);
-        // scale by the wider edge, then taper the slice to a trapezoid: the outline becomes one smooth curve.
-        // The clip bleeds 1px above/below so neighbouring slices overlap without hairlines.
-        const it = (((1 - kt / k) / 2) * 100).toFixed(3), ib = (((1 - kb / k) / 2) * 100).toFixed(3);
-        strips[i].style.transform = `translateY(${-dy}px) scaleX(${k})`;
-        strips[i].style.clipPath = `polygon(${it}% -1px, ${100 - +it}% -1px, ${100 - +ib}% calc(100% + 1px), ${ib}% calc(100% + 1px))`;
-      }
-    };
-    const closing = genie === "close";
-    apply(closing ? 0 : 1);
-    const c = animate(closing ? 0 : 1, closing ? 1 : 0, {
-      duration: closing ? 0.5 : 0.48, ease: closing ? [0.45, 0, 0.85, 0.5] : [0.15, 0.5, 0.3, 1], onUpdate: apply,
-      onComplete: () => { if (closing) { setClosed(true); setMinimized(false); setZoomed(false); } setGenie(null); },
-    });
-    return () => c.stop();
-  }, [genie]);
+  const [genie, setGenie] = useState<null | "open" | "close">(null); // fold animation in progress
   // Closed/minimised: the hero is one screen tall and the video fills it. Open: the video band stops
   // `overlap` px above the hero bottom so the window runs past it into the page.
   const videoDesktop = useRef<HTMLVideoElement>(null);
@@ -383,17 +341,21 @@ export default function Hero() {
               </button>
             </motion.div>
           ) : (
-          <motion.div key="window" className="relative" exit={{ opacity: 0, transition: { duration: 0 } }}>
-            <div style={{ visibility: genie ? "hidden" : "visible" }}>{windowFrame}</div>
-            {genie && (
-              <div ref={stripsRef} aria-hidden="true" inert className="pointer-events-none absolute inset-0 overflow-hidden">
-                {Array.from({ length: GENIE_STRIPS }, (_, i) => (
-                  <div key={i} className="absolute inset-x-0 overflow-hidden" style={{ transformOrigin: "50% 50%", willChange: "transform" }}>
-                    <div className="absolute inset-x-0">{windowFrame}</div>
-                  </div>
-                ))}
-              </div>
-            )}
+          <motion.div key="window" className="relative" style={{ perspective: 1600 }} exit={{ opacity: 0, transition: { duration: 0 } }}>
+            <motion.div
+              style={{ transformOrigin: "50% 0%", willChange: genie ? "transform, opacity" : undefined }}
+              initial={reduce ? false : FOLD_SHUT}
+              animate={genie === "close" ? FOLD_SHUT : FOLD_OPEN}
+              transition={genie === "close"
+                ? { duration: 0.5, ease: [0.55, 0, 0.75, 0.3], opacity: { duration: 0.22, delay: 0.28, ease: "linear" } }
+                : { duration: 0.6, ease: [0.16, 1, 0.3, 1], opacity: { duration: 0.2, ease: "linear" } }}
+              onAnimationComplete={() => {
+                if (genie === "close") { setClosed(true); setMinimized(false); setZoomed(false); }
+                setGenie(null);
+              }}
+            >
+              {windowFrame}
+            </motion.div>
           </motion.div>
           )}
           </AnimatePresence>
