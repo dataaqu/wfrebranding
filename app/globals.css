@@ -133,3 +133,14 @@
    (animations override the inline opacity:0 that the scripted intro starts from). */
 @keyframes wf-intro-show { to { opacity: 1; } }
 .wf-intro-static .wf-mark-body, .wf-intro-static .wf-mark-dot, .wf-intro-static .wf-letter { animation: wf-intro-show 0.5s ease 1.2s forwards; }
+
+/* Network carriers: endless logo row. The list holds the logos twice, so sliding by half loops seamlessly. */
+@keyframes wf-marquee { to { transform: translateX(-50%); } }
+.wf-marquee { animation: wf-marquee 50s linear infinite; }
+.group:hover .wf-marquee { animation-play-state: paused; }
+@media (prefers-reduced-motion: reduce) { .wf-marquee { animation: none; } }
+
+/* Quick contact: "typing…" dots before the team's greeting */
+@keyframes qc-dot { 0%, 60%, 100% { transform: translateY(0); opacity: 0.45; } 30% { transform: translateY(-4px); opacity: 1; } }
+.qc-dot { animation: qc-dot 0.9s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .qc-dot { animation: none; } }

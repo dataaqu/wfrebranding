@@ -1,64 +1,48 @@
 "use client";
 
-import { Reveal } from "@/components/brand/design-system";
+import { Reveal, chamfer } from "@/components/brand/design-system";
 
-// Logos as published on weforward.ge (memberships + carriers). Grey by default; hover lights the cell and shows the real logo colours.
-const MEMBERSHIPS = [
-  { src: "m1", name: "WCA China Global" },
-  { src: "m2", name: "JCtrans" },
-  { src: "m3", name: "WCA World" },
-  { src: "m4", name: "All World Shipping" },
+// Logos as published on weforward.ge (memberships + carriers), shown in their own colours.
+// The files carry a white background, so every logo sits on a white tile. `h` evens out visual weight:
+// wide wordmarks stay short, square marks get more height.
+type Logo = { src: string; name: string; h: string };
+const MEMBERSHIPS: Logo[] = [
+  { src: "m1", name: "WCA China Global", h: "h-14 md:h-16" },
+  { src: "m2", name: "JCtrans", h: "h-9 md:h-10" },
+  { src: "m3", name: "WCA World", h: "h-12 md:h-14" },
+  { src: "m4", name: "All World Shipping", h: "h-9 md:h-10" },
 ];
-const CARRIERS = [
-  { src: "maersk", name: "Maersk" },
-  { src: "hapag", name: "Hapag-Lloyd" },
-  { src: "cmacgm", name: "CMA CGM" },
-  { src: "cosco", name: "COSCO Shipping" },
-  { src: "evergreen", name: "Evergreen Marine" },
-  { src: "turkish", name: "Turkish Airlines" },
-  { src: "qatar", name: "Qatar Airways" },
-  { src: "lufthansa", name: "Lufthansa" },
-  { src: "airfrance", name: "Air France" },
-  { src: "flydubai", name: "flydubai" },
+const CARRIERS: Logo[] = [
+  { src: "maersk", name: "Maersk", h: "h-8" },
+  { src: "hapag", name: "Hapag-Lloyd", h: "h-6" },
+  { src: "cmacgm", name: "CMA CGM", h: "h-12" },
+  { src: "cosco", name: "COSCO Shipping", h: "h-12" },
+  { src: "evergreen", name: "Evergreen Marine", h: "h-14" },
+  { src: "turkish", name: "Turkish Airlines", h: "h-9" },
+  { src: "qatar", name: "Qatar Airways", h: "h-10" },
+  { src: "lufthansa", name: "Lufthansa", h: "h-7" },
+  { src: "airfrance", name: "Air France", h: "h-5" },
+  { src: "flydubai", name: "flydubai", h: "h-8" },
 ];
 const NAVY = "#04042b";
 
-const Plus = ({ className }: { className: string }) => (
-  <svg viewBox="0 0 11 11" className={`pointer-events-none absolute z-10 h-[11px] w-[11px] text-[#b9b8c9] ${className}`} aria-hidden="true">
-    <path d="M5.5 0v11M0 5.5h11" stroke="currentColor" strokeWidth="1" />
-  </svg>
-);
-
-function Grid({ label, items, cols }: { label: string; items: { src: string; name: string }[]; cols: string }) {
+/** White tile with a hairline frame and the brand's cut top-right corner (frame = 1px of the outer layer). */
+function Tile({ logo, className, hidden }: { logo: Logo; className: string; hidden?: boolean }) {
   return (
-    <div className="relative">
-      <p className="wf-sub mb-5 text-[11px] font-bold tracking-[0.14em] text-[#8a89a6]">{label}</p>
-      <div className="relative">
-      {/* full-bleed hairlines that fade out past the grid */}
-      <div aria-hidden="true" className="pointer-events-none absolute -inset-x-[50vw] inset-y-0 [mask-image:linear-gradient(to_right,transparent,#000_30%,#000_70%,transparent)]">
-        <div className="absolute inset-x-0 top-0 h-px bg-[#e6e5ef]" />
-        <div className="absolute inset-x-0 bottom-0 h-px bg-[#e6e5ef]" />
+    <div className={`p-px transition-colors duration-200 [@media(hover:hover)]:hover:bg-[#c9c1fb] ${className}`} style={{ background: "#e9e7f4", ...chamfer(18, "tr") }}>
+      <div className="flex h-full w-full items-center justify-center bg-white px-6" style={chamfer(17, "tr")}>{/* 1px smaller cut so the frame also shows along the diagonal */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={`/assets/logos/${logo.src}.webp`} alt={hidden ? "" : logo.name} loading="lazy" decoding="async" className={`${logo.h} w-auto max-w-full object-contain`} />
       </div>
-      <ul className={`relative grid border-l border-[#e6e5ef] pt-px ${cols}`}>
-        {items.map((it) => (
-          <li key={it.src} className="group relative flex h-32 items-center justify-center border-b border-r border-t border-[#e6e5ef] -mt-px px-6 hover:z-20 md:h-40 md:px-8">
-            <Plus className="-left-[6px] -top-[6px]" />
-            <Plus className="-right-[6px] -top-[6px]" />
-            <Plus className="-bottom-[6px] -left-[6px]" />
-            <Plus className="-bottom-[6px] -right-[6px]" />
-            {/* hover glow: lime frame + soft fill, row rules extend and fade; quick in, slow out */}
-            <span aria-hidden="true" className="pointer-events-none absolute -inset-px opacity-0 transition-opacity duration-700 ease-out group-hover:opacity-100 group-hover:duration-150">
-              <span className="absolute inset-0 border border-[#cdee5c] bg-[radial-gradient(ellipse_at_center,rgba(213,244,118,0.30),rgba(213,244,118,0.10)_70%)]" />
-              <span className="absolute -left-1/2 -right-1/2 top-0 h-px bg-[linear-gradient(to_right,transparent,#cdee5c_33%,#cdee5c_67%,transparent)]" />
-              <span className="absolute -left-1/2 -right-1/2 bottom-0 h-px bg-[linear-gradient(to_right,transparent,#cdee5c_33%,#cdee5c_67%,transparent)]" />
-            </span>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={`/assets/logos/${it.src}.webp`} alt={it.name} loading="lazy"
-              className="max-h-10 w-auto max-w-[78%] object-contain relative opacity-55 grayscale transition-[filter,opacity] duration-700 group-hover:opacity-100 group-hover:grayscale-0 group-hover:duration-200 md:max-h-12" />
-          </li>
-        ))}
-      </ul>
-      </div>
+    </div>
+  );
+}
+
+function GroupTitle({ children }: { children: string }) {
+  return (
+    <div className="flex items-center gap-5">
+      <h3 className="shrink-0 text-sm font-semibold" style={{ color: NAVY }}>{children}</h3>
+      <span aria-hidden="true" className="h-px flex-1 bg-[#e9e7f4]" />
     </div>
   );
 }
@@ -66,14 +50,35 @@ function Grid({ label, items, cols }: { label: string; items: { src: string; nam
 export default function Network() {
   return (
     <section id="network" aria-labelledby="network-title" className="overflow-hidden bg-white py-24 md:py-32">
-      <div className="mx-auto max-w-6xl px-6 md:px-10">
+      <div className="mx-auto max-w-[1360px] px-6 md:px-10">
         <Reveal id="network-head" className="mx-auto max-w-3xl text-center">
-          <h2 id="network-title" className="wf-head text-4xl leading-[1.05] md:text-6xl" style={{ color: NAVY }}>A global network behind every shipment</h2>
+          <h2 id="network-title" className="wf-head text-balance text-4xl leading-[1.05] md:text-6xl" style={{ color: NAVY }}>A global network behind every shipment</h2>
         </Reveal>
-        <div className="mt-16 space-y-16 md:mt-24 md:space-y-20">
-          <Grid label="GLOBAL NETWORK MEMBERSHIPS" items={MEMBERSHIPS} cols="grid-cols-2 md:grid-cols-4" />
-          <Grid label="WITH LEADING GLOBAL CARRIERS" items={CARRIERS} cols="grid-cols-2 md:grid-cols-5" />
+
+        <div className="mt-16 md:mt-20">
+          <GroupTitle>Network memberships</GroupTitle>
+          <ul className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
+            {MEMBERSHIPS.map((m) => <li key={m.src}><Tile logo={m} className="h-32 md:h-40" /></li>)}
+          </ul>
         </div>
+
+        <div className="mt-14 md:mt-16">
+          <GroupTitle>Leading global carriers</GroupTitle>
+        </div>
+      </div>
+
+      {/* carriers: a slow, endless row that pauses under the pointer; reduced motion gets a static wrapped grid */}
+      <div className="group mt-6 [mask-image:linear-gradient(to_right,transparent,#000_8%,#000_92%,transparent)] motion-reduce:[mask-image:none]">
+        <ul className="wf-marquee flex w-max gap-4 motion-reduce:mx-auto motion-reduce:w-auto motion-reduce:max-w-[1360px] motion-reduce:flex-wrap motion-reduce:justify-center motion-reduce:px-6 md:motion-reduce:px-10">
+          {[...CARRIERS, ...CARRIERS].map((c, i) => {
+            const copy = i >= CARRIERS.length; // second pass only closes the loop
+            return (
+              <li key={`${c.src}-${i}`} aria-hidden={copy || undefined} className={copy ? "motion-reduce:hidden" : undefined}>
+                <Tile logo={c} hidden={copy} className="h-28 w-52 md:h-32 md:w-60" />
+              </li>
+            );
+          })}
+        </ul>
       </div>
     </section>
   );

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { AnimatePresence, motion, useMotionValueEvent, useReducedMotion, useScroll, useSpring, useTransform, type MotionValue } from "motion/react";
+import { AnimatePresence, motion, useInView, useReducedMotion } from "motion/react";
 import { Reveal, WMark } from "@/components/brand/design-system";
 
 // Services and copy as on weforward.ge. `media` = clip in /assets/services (sources: videos/services, 1-6 in this order).
@@ -14,7 +14,8 @@ const SERVICES = [
   { title: "Customs brokerage", text: "Expert customs clearance and trade compliance services to expedite your shipments.", media: "customs" },
 ];
 const EASE = [0.45, 0, 0.15, 1] as const;
-const NAVY = "#04042b", GREEN = "#9fc31f", MUTED = "#c9c8d6";
+const NAVY = "#04042b";
+const ADVANCE_S = 7; // auto-advance: seconds per service while the section is on screen
 
 const LIME = "#d5f476";
 // Brand card band: flat top for ~58% of the width, then a short drop to the right edge.
@@ -85,106 +86,67 @@ function useNear(ref: React.RefObject<HTMLElement | null>, margin = "800px") {
   }, [ref, margin, near]);
   return near;
 }
-/** which layout is on screen, so hidden duplicates never download media */
-function useDesktop() {
-  const [d, setD] = useState<boolean | null>(null);
-  useEffect(() => {
-    const m = window.matchMedia("(min-width: 1024px)");
-    const f = () => setD(m.matches); f();
-    m.addEventListener("change", f);
-    return () => m.removeEventListener("change", f);
-  }, []);
-  return d;
-}
-
-// One word whose colour follows scroll: muted → brand green (leading edge) → navy.
-function Word({ children, progress, start, end }: { children: string; progress: MotionValue<number>; start: number; end: number }) {
-  const color = useTransform(progress, [start, end, Math.min(1, end + 0.12)], [MUTED, GREEN, NAVY]);
-  return <motion.span style={{ color }}>{children} </motion.span>;
-}
-
-function Step({ index }: { index: number }) {
-  const ref = useRef<HTMLDivElement>(null);
-  const reduce = useReducedMotion();
-  const s = SERVICES[index];
-  const { scrollYProgress: raw } = useScroll({ target: ref, offset: ["start 0.8", "center 0.45"] });
-  const scrollYProgress = useSpring(raw, { stiffness: 90, damping: 26, mass: 0.6 });
-  const words = s.text.split(" ");
-
-  return (
-    <div ref={ref} className="relative flex min-h-[62svh] flex-col justify-center py-10">
-      <h3 className="sr-only">{s.title}</h3>
-      <div className="relative">
-        <p className="max-w-[460px] text-[clamp(1.6rem,2.5vw,2.4rem)] leading-[1.18] tracking-tight" style={{ color: NAVY }}>
-          {reduce ? s.text : words.map((w, i) => (
-            <Word key={i} progress={scrollYProgress} start={0.15 + (i / words.length) * 0.6} end={0.15 + ((i + 1) / words.length) * 0.6}>{w}</Word>
-          ))}
-        </p>
-      </div>
-    </div>
-  );
-}
-
-export default function Services() {
+/** Accordion (Flexport-style): the open service shows its text, the rest stay collapsed and muted.
+ *  A line on the open item fills over ADVANCE_S seconds, then the next one opens; clicking any item opens it
+ *  and restarts the timer. The brand card on the right crossfades to that service's clip. */
+export default function Services({ heading = true }: { heading?: boolean }) {
   const [active, setActive] = useState(0);
-  const reduce = useReducedMotion();
-  const steps = useRef<HTMLDivElement>(null);
+  const reduce = !!useReducedMotion();
   const sectionRef = useRef<HTMLElement>(null);
   const near = useNear(sectionRef);
-  const desktop = useDesktop();
-  // Active step = the one crossing the viewport centre; derived from scroll so jumps never leave it stale.
-  const { scrollYProgress } = useScroll({ target: steps, offset: ["start center", "end center"] });
-  useMotionValueEvent(scrollYProgress, "change", (v) => setActive(Math.min(SERVICES.length - 1, Math.max(0, Math.floor(v * SERVICES.length)))));
+  const inView = useInView(sectionRef, { amount: 0.35 });
+  const auto = inView && !reduce;
+  const next = () => setActive((a) => (a + 1) % SERVICES.length);
 
   return (
-    <section ref={sectionRef} id="services" aria-labelledby="services-title" className="bg-white pb-16 pt-6">
-      <h2 id="services-title" className="sr-only">Services</h2>
-      <div className="mx-auto max-w-6xl px-6 md:px-10 lg:hidden">
-        <Reveal id="services-head"><p aria-hidden="true" className="wf-head text-4xl" style={{ color: NAVY }}>Services</p></Reveal>
-      </div>
-
-      {/* Desktop: descriptions left, sticky brand card (video + lime title band) right */}
-      <div className="mx-auto hidden max-w-[1440px] grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] gap-16 px-10 lg:grid xl:px-16">
-        <div className="pl-20 pt-[6svh] xl:pl-28">
-          <Reveal id="services-head-desktop"><p aria-hidden="true" className="wf-head text-6xl" style={{ color: NAVY }}>Services</p></Reveal>
-          <div ref={steps}>{SERVICES.map((s, i) => <Step key={s.title} index={i} />)}</div>
-        </div>
-        <div className="relative">
-          <div className="sticky top-[6svh] ml-auto aspect-square overflow-hidden bg-[#0b0b1f]" style={{ width: "min(100%, 88svh)" }}>{/* square like the clips: nothing cropped */}
-            {SERVICES.map((sv, i) => {
+    <section ref={sectionRef} id="services" aria-labelledby={heading ? "services-title" : undefined} aria-label={heading ? undefined : "Services"} className={`bg-white ${heading ? "py-20 md:py-28" : "pb-20 md:pb-28"}`}>
+      <div className="mx-auto grid max-w-[1360px] items-start gap-12 px-6 md:px-10 lg:grid-cols-2 lg:gap-14">
+        <div className="lg:order-1">
+          {heading && <Reveal id="services-head"><h2 id="services-title" className="wf-head text-4xl md:text-6xl" style={{ color: NAVY }}>Services</h2></Reveal>}
+          <ul className={`${heading ? "mt-10" : ""} border-b border-[#e7e6f0]`}>
+            {SERVICES.map((s, i) => {
               const on = i === active;
               return (
-                <motion.div key={sv.title} className="absolute inset-0" initial={false} style={{ zIndex: on ? 2 : 1 }}
-                  animate={{ opacity: on ? 1 : 0, scale: on ? 1 : 1.06 }}
-                  transition={reduce ? { duration: 0 } : on
-                    ? { opacity: { duration: 0.9, ease: EASE }, scale: { duration: 1.6, ease: EASE } }
-                    : { opacity: { duration: 0.5, delay: 0.7, ease: "linear" }, scale: { duration: 0, delay: 1.2 } }}>
-                  <Video name={sv.media} active={on} eager={Math.abs(i - active) <= 1} load={near && desktop === true} />
-                </motion.div>
+                <li key={s.title} className="relative border-t border-[#e7e6f0]">
+                  {/* progress line on the open item's top border */}
+                  {on && (
+                    <motion.span key={`p${active}-${auto}`} aria-hidden="true" className="absolute inset-x-0 -top-px h-0.5 origin-left bg-brand-500"
+                      initial={{ scaleX: auto ? 0 : 1 }} animate={{ scaleX: 1 }}
+                      transition={auto ? { duration: ADVANCE_S, ease: "linear" } : { duration: 0 }}
+                      onAnimationComplete={() => { if (auto) next(); }} />
+                  )}
+                  <button type="button" aria-expanded={on} aria-controls={`service-panel-${i}`} id={`service-tab-${i}`} onClick={() => setActive(i)}
+                    className={`flex w-full items-center justify-between py-5 text-left text-lg transition-colors duration-200 md:text-xl ${on ? "" : "[@media(hover:hover)]:hover:text-[#4b4b66]"}`}
+                    style={{ color: on ? NAVY : "#9a99b0" }}>
+                    {s.title}
+                  </button>
+                  {/* grid-rows 0fr→1fr animates to the text's natural height */}
+                  <div id={`service-panel-${i}`} role="region" aria-labelledby={`service-tab-${i}`} inert={!on}
+                    className={`grid transition-[grid-template-rows,opacity] duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none ${on ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}>
+                    <div className="overflow-hidden">
+                      <p className="max-w-md pb-6 text-base leading-7 text-[#4b4b66]">{s.text}</p>
+                    </div>
+                  </div>
+                </li>
               );
             })}
-            <CardChrome title={SERVICES[active].title} reduce={!!reduce} />
-          </div>
+          </ul>
         </div>
-      </div>
-
-      {/* Mobile: stacked */}
-      <div className="mx-auto mt-12 max-w-6xl space-y-14 px-6 md:px-10 lg:hidden">
-        {SERVICES.map((s) => (
-          <article key={s.title}>
-            <h3 className="sr-only">{s.title}</h3>
-            <p className="text-xl leading-snug tracking-tight" style={{ color: NAVY }}>{s.text}</p>
-            <div className="relative mt-6 aspect-square overflow-hidden bg-[#0b0b1f]">
-              {near && desktop === false && (
-                <video muted loop playsInline autoPlay preload="none" poster={`/assets/services/${s.media}.jpg`} aria-hidden="true" className="h-full w-full object-cover">
-                  <source src={`/assets/services/${s.media}.webm`} type="video/webm" />
-                  <source src={`/assets/services/${s.media}.mp4`} type="video/mp4" />
-                </video>
-              )}
-              <CardChrome title={s.title} reduce />
-            </div>
-          </article>
-        ))}
+        <div className="relative order-first aspect-square w-full overflow-hidden bg-[#0b0b1f] lg:order-2">{/* square like the clips: nothing cropped */}
+          {SERVICES.map((sv, i) => {
+            const on = i === active;
+            return (
+              <motion.div key={sv.title} className="absolute inset-0" initial={false} style={{ zIndex: on ? 2 : 1 }}
+                animate={{ opacity: on ? 1 : 0, scale: on ? 1 : 1.06 }}
+                transition={reduce ? { duration: 0 } : on
+                  ? { opacity: { duration: 0.9, ease: EASE }, scale: { duration: 1.6, ease: EASE } }
+                  : { opacity: { duration: 0.5, delay: 0.7, ease: "linear" }, scale: { duration: 0, delay: 1.2 } }}>
+                <Video name={sv.media} active={on} eager={Math.abs(i - active) <= 1} load={near} />
+              </motion.div>
+            );
+          })}
+          <CardChrome title={SERVICES[active].title} reduce={reduce} />
+        </div>
       </div>
     </section>
   );

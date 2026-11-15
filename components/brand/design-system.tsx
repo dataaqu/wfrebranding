@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { motion, useReducedMotion, useAnimate } from "motion/react";
-import { stagger } from "motion";
+import { useEffect, useRef, useState } from "react";
+import { motion, useReducedMotion } from "motion/react";
+import { createTimeline, stagger, svg, utils, type Timeline } from "animejs";
 import { markIntroDone, preloadCritical } from "@/lib/intro";
 
 /* ------------------------------------------------------------------ */
@@ -81,35 +81,48 @@ export function LogoHorizontal({ markColor = "var(--color-brand-500)", wordColor
 }
 
 /* ------------------------------------------------------------------ */
-/* Intro — brand loader + transition, GSAP-style timeline built with   */
-/* Motion useAnimate sequences (guide:gsap-to-motion.md#3, #7) and     */
-/* line drawing with pathLength (guide:recipes-svg.md#0).              */
-/* The logo is "written": only the W uses an outline draw (person's    */
-/* exception to the no-outline rule); dots and name just appear.       */
-/*   0.00  W outline draws                        easeInOut .80         */
-/*   0.60  W fills                                .30                   */
-/*   0.85  dots appear, 100 ms apart              .15                   */
-/*   1.05  WEFORWARD typed letter by letter       .12 each, 70 ms       */
-/*   ~1.9  logo written; if critical assets (lib/intro) are still       */
+/* Intro — brand loader + transition, an Anime.js v4 timeline.         */
+/* Writing — a hero signing their emblem: four fast, separate strokes  */
+/* (down, up, down, up). Each stroke owns a slice of the W (clipPath)  */
+/* and is revealed by its own pen (svg.createDrawable), so no stroke   */
+/* bleeds into the next.                                              */
+/*   0.00  4 strokes, 50 ms apart                  inOut(2.5) .21–.23   */
+/*   ~1.1  dots tapped in, 90 ms apart             outBack .40          */
+/*   ~1.3  WEFORWARD typed letter by letter        .26 each, 55 ms      */
+/*   ~2.0  logo written; if critical assets (lib/intro) are still       */
 /*         loading, a lime progress bar shows and the intro waits       */
-/*         (max 6 s) — then: logo out, panels wipe up and away and     */
-/*         markIntroDone() starts the page's own entrance animations.   */
-/* Reduced motion: static logo, then a 300 ms fade; no panels.         */
+/*         (max 6 s).                                                   */
+/* Exit: the word drops away, then the mark turns into a window — the  */
+/* dark backdrop gets a W-shaped hole exactly where the logo was, and  */
+/* the hole zooms past the camera until the page fills the screen.     */
+/* markIntroDone() fires part-way so the page's entrances overlap.     */
+/* Reduced motion: static logo, then a 300 ms fade.                    */
 /* ------------------------------------------------------------------ */
-const EXPO_IN_OUT = [0.87, 0, 0.13, 1] as const;
-const POWER_IN = [0.7, 0, 0.84, 0] as const;
-// One colour, stepped through its guideline tints (Accent Purple 100 / 80 / 60 / 40 %).
-const PANELS = ["#644ff2", "#8373f5", "#a296f7", "#c1b9fa"];
+// The W's four strokes in writing order (mark viewBox units). `clip` is the slice of the W the
+// stroke owns (slices overlap by ~1.5 so no seam shows); the pen runs a→b, a little past the
+// shape at both ends, with butt caps so it reveals nothing ahead of itself.
+const STROKES: { clip: string; a: [number, number]; b: [number, number]; ms: number }[] = [
+  { clip: "-20,-10 42.5,-10 42.5,87 39.5,167 27.5,250 -20,250", a: [22, 20], b: [25, 250], ms: 210 },  // left arm, down
+  { clip: "41,-10 89.5,-10 89.5,250 26,250 38,167 41,87", a: [10, 236], b: [100, 40], ms: 230 },        // up to the peak
+  { clip: "88,-10 130,-10 130.5,150 134,165 129.5,250 88,250", a: [82, 40], b: [128, 256], ms: 220 },         // down into the valley
+  { clip: "131,-10 200,-10 200,250 128,250 132,157", a: [124, 256], b: [164, 10], ms: 230 },            // right arm, up
+];
+const PEN_WIDTH = 100;
+// zoom origin: a point well inside the mark (middle peak), so the hole always grows over it
+const ZOOM_X = 90, ZOOM_Y = 112;
+const VIEW_X = -4, VIEW_Y = -4, VIEW_H = 245; // mark viewBox origin + height
 
 export function Intro({ onDone }: { onDone?: () => void }) {
   const reduce = useReducedMotion();
-  const [scope, animate] = useAnimate();
+  const scope = useRef<HTMLDivElement>(null);
   const [progress, setProgress] = useState(0);
   const [waiting, setWaiting] = useState(false);
   const [hydrated, setHydrated] = useState(false); // until then a CSS fallback fades the logo in (slow JS)
 
   useEffect(() => {
     let alive = true;
+    const root = scope.current!;
+    const $ = (sel: string) => Array.from(root.querySelectorAll<SVGElement>(sel));
     const html = document.documentElement, prevOverflow = html.style.overflow;
     html.style.overflow = "hidden"; // no scrolling under the loader
     // assets load in the background while the logo is written; on slow networks the reveal waits for
@@ -117,30 +130,54 @@ export function Intro({ onDone }: { onDone?: () => void }) {
     const MAX_WAIT = 6000;
     const ready = Promise.race([preloadCritical((p) => alive && setProgress(p)), new Promise<void>((r) => setTimeout(r, MAX_WAIT))]);
     const reveal = () => { html.style.overflow = prevOverflow; markIntroDone(); };
-    // JS arrived late (slow network): the CSS fallback already showed the logo, so don't redraw it
+    // JS arrived late (slow network): the CSS fallback already showed the logo, so don't rewrite it
     const late = performance.now() > 1100;
-    if (late) scope.current.querySelectorAll(".wf-mark-body, .wf-mark-dot, .wf-letter").forEach((el: HTMLElement) => { el.style.opacity = "1"; });
     setHydrated(true);
+    let write: Timeline | null = null, exit: Timeline | null = null, startTimer = 0;
 
     if (reduce) {
+      // same markup as the animated intro (so SSR and hydration agree); just show the finished logo
+      utils.set($(".wf-mark-body, .wf-mark-dot, .wf-letter"), { opacity: 1 });
       ready.then(() => {
         if (!alive) return;
         reveal();
-        animate(scope.current, { opacity: [1, 0] }, { duration: 0.3 }).then(() => onDone?.());
+        exit = createTimeline({ onComplete: () => onDone?.() }).add(root, { opacity: [1, 0], duration: 300, ease: "linear" });
       });
-      return () => { alive = false; html.style.overflow = prevOverflow; };
+      return () => { alive = false; exit?.revert(); html.style.overflow = prevOverflow; };
     }
 
-    // 1) write the logo (≈2 s) — skipped when the static fallback is already showing it
-    const write = late ? animate(scope.current, { opacity: 1 }, { duration: 0 }) : animate([
-      [".wf-mark-body-line", { pathLength: [0, 1], opacity: [1, 1] }, { duration: 0.8, ease: "easeInOut", at: 0 }],
-      [".wf-mark-body", { opacity: [0, 1] }, { duration: 0.3, ease: "easeOut", at: 0.6 }],
-      [".wf-mark-body-line", { opacity: [1, 0] }, { duration: 0.2, ease: "easeOut", at: 0.85 }],
-      [".wf-mark-dot", { opacity: [0, 1] }, { duration: 0.15, ease: "easeOut", delay: stagger(0.1), at: 0.85 }],
-      [".wf-letter", { opacity: [0, 1] }, { duration: 0.12, ease: "easeOut", delay: stagger(0.07), at: 1.05 }],
-    ]);
-    let exit: ReturnType<typeof animate> | null = null, revealTimer = 0;
-    write.then(() => {
+    // 1) write the logo (≈1.9 s) — skipped when the static fallback is already showing it
+    if (late) utils.set($(".wf-mark-body, .wf-mark-dot, .wf-letter"), { opacity: 1 });
+    else {
+      utils.set($(".wf-mark-body"), { opacity: 1 }); // hidden by the pen masks until written
+      const pens = svg.createDrawable($(".wf-pen"));
+      utils.set(pens, { draw: "0 0" });
+      // paused until the page settles: hydration blocks the main thread for the first few hundred ms,
+      // and a timeline started then skips its opening frames, so the first stroke looks already begun
+      write = createTimeline({ autoplay: false });
+      let t = 0;
+      STROKES.forEach(({ ms }, i) => {
+        write!.add(pens[i], { draw: ["0 0", "0 1"], duration: ms, ease: "inOut(2.5)" }, t);
+        t += ms + 50;
+      });
+      write
+        .add($(".wf-mark-dot"), { scale: [0, 1], opacity: [1, 1], duration: 400, ease: "outBack(2.5)", delay: stagger(90) }, t + 40)
+        .add($(".wf-letter"), { opacity: [0, 1], y: [10, 0], duration: 260, ease: "out(3)", delay: stagger(55) }, t + 240);
+      // start once 6 frames in a row arrive on time (max 1.2 s), after a short empty beat
+      const t0 = performance.now();
+      let last = t0, calm = 0;
+      const watch = (now: number) => {
+        if (!alive) return;
+        calm = now - last < 40 ? calm + 1 : 0; // hydration stalls are 50 ms+
+        last = now;
+        if (calm >= 6 || now - t0 > 1200) startTimer = window.setTimeout(() => alive && write?.play(), 150);
+        else requestAnimationFrame(watch);
+      };
+      requestAnimationFrame(watch);
+    }
+
+    let revealTimer = 0;
+    (write ?? Promise.resolve()).then(() => {
       if (!alive) return;
       // 2) still loading? show the progress bar and wait
       let loaded = false;
@@ -150,47 +187,77 @@ export function Intro({ onDone }: { onDone?: () => void }) {
     }).then(() => {
       if (!alive) return;
       setWaiting(false);
-      // 3) logo out, panels wipe up and away; the page's own entrances start as the panels leave
-      exit = animate([
-        [".wf-intro-logo", { scale: [1, 0.9], opacity: [1, 0], y: [0, -24] }, { duration: 0.4, ease: POWER_IN, at: 0.15 }],
-        [".wf-panel", { y: ["100%", "0%"] }, { duration: 0.55, ease: EXPO_IN_OUT, delay: stagger(0.07), at: 0.3 }],
-        [".wf-intro-bg", { opacity: [1, 0] }, { duration: 0.01, at: 1.05 }],
-        [".wf-panel", { y: ["0%", "-100%"] }, { duration: 0.65, ease: EXPO_IN_OUT, delay: stagger(0.07), at: 1.1 }],
-      ]);
-      revealTimer = window.setTimeout(reveal, 1300);
-      exit.then(() => onDone?.());
+      // 3) window zoom: place the hole exactly over the on-screen mark, swap the purple mark for
+      //    the hole (the page shows through the W), then zoom the hole past the camera
+      const box = root.querySelector(".wf-intro-mark")!.getBoundingClientRect();
+      const k = box.height / VIEW_H; // px per mark unit
+      const cx = box.left + (ZOOM_X - VIEW_X) * k, cy = box.top + (ZOOM_Y - VIEW_Y) * k;
+      const hole = root.querySelector<SVGGElement>(".wf-hole")!;
+      const z = { s: 1 };
+      const place = () => hole.setAttribute("transform", `translate(${cx} ${cy}) scale(${k * z.s}) translate(${-ZOOM_X} ${-ZOOM_Y})`);
+      place();
+      // big enough that the hole's nearest edge (~21 units from the zoom point) clears the far corner
+      const far = Math.hypot(Math.max(cx, innerWidth - cx), Math.max(cy, innerHeight - cy));
+      const S = (far / (20 * k)) * 1.1;
+      exit = createTimeline({ onComplete: () => { root.style.visibility = "hidden"; onDone?.(); } })
+        .add($(".wf-letter"), { opacity: 0, y: 14, duration: 280, ease: "in(2)", delay: stagger(25) }, 0)
+        .add($(".wf-progress"), { opacity: 0, duration: 200 }, 0)
+        .set($(".wf-intro-mark"), { opacity: 0 }, 380)
+        .set(hole, { opacity: 1 }, 380)
+        .add(z, { s: [1, S], duration: 1300, ease: "inOut(4)", onUpdate: place }, 380);
+      revealTimer = window.setTimeout(reveal, 380 + 650);
     });
-    return () => { alive = false; write.stop(); exit?.stop(); clearTimeout(revealTimer); html.style.overflow = prevOverflow; };
+    return () => { alive = false; write?.revert(); exit?.revert(); clearTimeout(revealTimer); clearTimeout(startTimer); html.style.overflow = prevOverflow; };
   }, []);
 
+  const dotStyle = { transformBox: "fill-box", transformOrigin: "center" } as const;
   return (
     <div ref={scope} className={`pointer-events-none fixed inset-0 z-50 overflow-hidden ${hydrated ? "" : "wf-intro-static"}`}>
-      <div className="wf-intro-bg absolute inset-0 bg-ink-950" />
-      <div className="wf-intro-logo absolute inset-0 flex flex-col items-center justify-center gap-7">
-        <svg viewBox="-4 -4 192 245" className="h-28 w-auto overflow-visible md:h-36">
-          <polygon className="wf-mark-body" points={MARK_BODY} fill="var(--color-brand-500)" style={reduce ? undefined : { opacity: 0 }} />
-          <polygon className="wf-mark-dot" points={MARK_DOT_L} fill="var(--color-brand-500)" style={reduce ? undefined : { opacity: 0 }} />
-          <polygon className="wf-mark-dot" points={MARK_DOT_R} fill="var(--color-brand-500)" style={reduce ? undefined : { opacity: 0 }} />
-          {!reduce && (
-            <g fill="none" stroke="var(--color-brand-500)" strokeWidth={3} strokeLinejoin="miter">
-              <polygon className="wf-mark-body-line" points={MARK_BODY} style={{ opacity: 0 }} />
+      {/* backdrop: solid until the exit, when the W-shaped hole in its mask turns on and zooms */}
+      <svg className="wf-intro-bg absolute inset-0 h-full w-full" aria-hidden>
+        <defs>
+          <mask id="wf-intro-window" maskUnits="userSpaceOnUse" x="0" y="0" width="100%" height="100%">
+            <rect width="100%" height="100%" fill="#fff" />
+            <g className="wf-hole" fill="#000" style={{ opacity: 0 }}>
+              <polygon points={MARK_BODY} />
+              <polygon points={MARK_DOT_L} />
+              <polygon points={MARK_DOT_R} />
             </g>
-          )}
+          </mask>
+        </defs>
+        <rect width="100%" height="100%" fill="var(--color-ink-950)" mask="url(#wf-intro-window)" />
+      </svg>
+      <div className="wf-intro-logo absolute inset-0 flex flex-col items-center justify-center gap-7">
+        <svg viewBox={`${VIEW_X} ${VIEW_Y} 192 ${VIEW_H}`} className="wf-intro-mark h-28 w-auto overflow-visible md:h-36">
+          {/* the server can't know about reduced motion, so the markup never branches on it */}
+          <>
+            {/* pens start fully drawn (so the CSS fallback shows the whole W); JS rewinds and writes them */}
+            <defs>
+              {STROKES.map(({ clip, a, b }, i) => (
+                <g key={i}>
+                  <clipPath id={`wf-intro-slice-${i}`}><polygon points={clip} /></clipPath>
+                  <mask id={`wf-intro-pen-${i}`} maskUnits="userSpaceOnUse" x={-60} y={-60} width={320} height={380}>
+                    <path className="wf-pen" d={`M${a[0]},${a[1]} L${b[0]},${b[1]}`} fill="none" stroke="#fff" strokeWidth={PEN_WIDTH} strokeLinecap="butt" />
+                  </mask>
+                </g>
+              ))}
+            </defs>
+            {STROKES.map((_, i) => (
+              <g key={i} clipPath={`url(#wf-intro-slice-${i})`}>
+                <polygon className="wf-mark-body" points={MARK_BODY} fill="var(--color-brand-500)" mask={`url(#wf-intro-pen-${i})`} style={{ opacity: 0 }} />
+              </g>
+            ))}
+          </>
+          <polygon className="wf-mark-dot" points={MARK_DOT_L} fill="var(--color-brand-500)" style={{ ...dotStyle, opacity: 0 }} />
+          <polygon className="wf-mark-dot" points={MARK_DOT_R} fill="var(--color-brand-500)" style={{ ...dotStyle, opacity: 0 }} />
         </svg>
-        <Wordmark className="h-8 w-auto md:h-11" animated={!reduce} />
+        <Wordmark className="h-8 w-auto md:h-11" animated />
         {/* shown only if assets are still loading once the logo is written */}
         <div role="progressbar" aria-label="Loading" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progress * 100)}
-          className={`h-[2px] w-40 overflow-hidden bg-white/10 transition-opacity duration-300 md:w-56 ${waiting ? "opacity-100" : "opacity-0"}`}>
+          className={`wf-progress h-[2px] w-40 overflow-hidden bg-white/10 transition-opacity duration-300 md:w-56 ${waiting ? "opacity-100" : "opacity-0"}`}>
           <div className="h-full origin-left bg-[#d5f476] transition-transform duration-500 ease-out" style={{ transform: `scaleX(${Math.max(0.04, progress)})` }} />
         </div>
       </div>
-      {!reduce && (
-        <div className="absolute inset-0 flex">
-          {PANELS.map((c, i) => (
-            <div key={i} className="wf-panel h-full flex-1" style={{ background: c, transform: "translateY(100%)" }} />
-          ))}
-        </div>
-      )}
     </div>
   );
 }

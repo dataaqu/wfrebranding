@@ -552,29 +552,27 @@ export default function Routes() {
   const pct = Math.round(((legIndex + 1) / route.legs.length) * 100);
 
   return (
-    <section id="routes" className="relative pb-10 pt-4 md:pt-6" style={{ background: "linear-gradient(to bottom, #f8f7ff 0, #f8f7ff calc(100% - 200px), #ffffff 100%)", color: INK }}>
-      {/* rounded transition: a dome of the section colour rising behind the globe (Facts sits on a higher layer) */}
-      <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 bottom-full h-[22vw] overflow-hidden">
-        <div className="absolute left-1/2 top-0 h-[60vw] w-[125vw] -translate-x-1/2 rounded-[50%]" style={{ background: "#f8f7ff" }} />
-      </div>
-      <div className="mx-auto max-w-6xl px-6 md:px-10">
+    <section id="routes" className="relative pb-10 pt-16 md:pt-24" style={{ background: "linear-gradient(to bottom, #f8f7ff 0, #f8f7ff calc(100% - 200px), #ffffff 100%)", color: INK }}>
+      <div className="mx-auto max-w-[1360px] px-6 md:px-10">
         <div className="flex flex-wrap items-end justify-between gap-6">
           <Reveal id="routes-head">
             <h2 className="sr-only">Your route. In focus.</h2>
             <div aria-hidden="true">
-              <div className="wf-head text-5xl md:text-7xl" style={{ color: INK }}>Your route.</div>
-              <div className="wf-head text-5xl md:text-7xl" style={{ color: PURPLE }}>In focus.</div>
+              <div className="wf-head text-4xl md:text-6xl" style={{ color: INK }}>Your route.</div>
+              <div className="wf-head text-4xl md:text-6xl" style={{ color: PURPLE }}>In focus.</div>
             </div>
           </Reveal>
           <p className="max-w-[17rem] text-[15px] leading-7" style={{ color: "#4b4b66" }}>Choose a country. Explore the connections. See every stage.</p>
         </div>
 
 
+        {/* desktop: map on the left, the controls in a column on the right; phones/tablets: controls, then map */}
+        <div className="mt-10 grid gap-6 lg:grid-cols-[minmax(0,1fr)_420px]">
         {/* ===== 1. controls: choose ===== */}
-        <section ref={panelRef} id="route-explorer" aria-labelledby="route-title" className="relative isolate z-20 mt-10 p-5 md:p-6">
+        <section ref={panelRef} id="route-explorer" aria-labelledby="route-title" className="relative isolate z-20 p-5 md:p-6 lg:order-2">
           {/* chamfered surface lives on its own layer: clip-path on the card itself would clip the country dropdown */}
           <div aria-hidden="true" className="absolute inset-0 -z-10 bg-white" style={chamfer(24, "tr")} />
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
+          <div className="flex flex-col gap-4 md:flex-row md:items-start lg:flex-col lg:items-stretch">
             <div className="shrink-0">
               <span className={LABEL} style={{ color: "#686879" }}>Transport</span>
               <div role="group" aria-label="Transport mode" className="mt-2 inline-flex gap-0.5 bg-[#f6f5fc] p-1 ring-1 ring-inset ring-[#e9e7f7]">
@@ -625,7 +623,7 @@ export default function Routes() {
               </div>
               <p data-caption className="mt-2 text-[12px] leading-5" style={{ color: "#6f6e88" }}>{A(caption)}</p>
             </div>
-            <label className="block w-full lg:w-72">
+            <label className="block w-full md:w-72 lg:w-full">
               <span className={LABEL} style={{ color: "#686879" }}>Choose a corridor</span>
               <span className="relative mt-2 block">
                 <select id="route-family" value={route.id} onChange={(e) => selectRoute(e.target.value)} className={`${FIELD} pr-10`} style={{ color: INK }}>
@@ -671,7 +669,7 @@ export default function Routes() {
             {cardFields.map((f) => (
               <fieldset key={f.key} className="w-full min-w-0">
                 <legend className={LABEL} style={{ color: "#686879" }}>{L(f.label)}</legend>
-                <div role="group" aria-label={L(f.label)} className="mt-2 grid gap-2 sm:grid-cols-3">
+                <div role="group" aria-label={L(f.label)} className="mt-2 grid gap-2 sm:grid-cols-3 lg:grid-cols-1">
                   {f.options.map((o) => {
                     const on = route.options[f.key] === o.id;
                     return (
@@ -722,11 +720,10 @@ export default function Routes() {
             )}
           </div>
         </section>
-      </div>
 
       {/* ===== 2. map: see ===== */}
-      <div className="relative -mt-6">
-        <div ref={worldRef} data-mode={route.mode} className={`relative overflow-hidden ${expanded ? `fixed inset-3 z-[70] md:inset-8 ${SURFACE}` : "h-[62vh] min-h-[440px] lg:h-[82vh] lg:min-h-[680px] lg:max-h-[960px]"}`} style={{ background: expanded ? "#f8f7ff" : "transparent" }}>
+      <div className="relative lg:order-1">
+        <div ref={worldRef} data-mode={route.mode} className={`relative overflow-hidden ${expanded ? `fixed inset-3 z-[70] md:inset-8 ${SURFACE}` : "h-[62vh] min-h-[440px] lg:h-full lg:min-h-[620px]"}`} style={{ background: expanded ? "#f8f7ff" : "transparent" }}>
           <div ref={mapBoxRef} className="absolute inset-0" onPointerDown={(e) => { if (!(e.target as Element).closest("[data-stop]")) setTip(null); }} style={{
             maskImage: "linear-gradient(to bottom, transparent 0, #000 14%, #000 86%, transparent 100%), linear-gradient(to right, transparent 0, #000 10%, #000 90%, transparent 100%)",
             WebkitMaskImage: "linear-gradient(to bottom, transparent 0, #000 14%, #000 86%, transparent 100%), linear-gradient(to right, transparent 0, #000 10%, #000 90%, transparent 100%)",
@@ -825,11 +822,11 @@ export default function Routes() {
             );
           })()}
           {/* route title on the map */}
-          <div className="pointer-events-none absolute left-0 right-0 top-[14%] z-10 mx-auto max-w-6xl px-6 md:px-10">
+          <div className="pointer-events-none absolute inset-x-0 top-6 z-10 px-6 md:px-8">
             <h3 id="route-title" className="text-[26px] leading-tight md:text-[34px]" style={{ color: INK, fontFamily: '"Loos Wide", Inter, sans-serif', fontWeight: 500, letterSpacing: "-0.02em" }}>{A(L(route.title))}</h3>
           </div>
           {/* preview + consolidation stops, bottom */}
-          <div ref={dockRef} className="absolute inset-x-0 bottom-[8%] z-10 mx-auto flex max-w-6xl flex-wrap items-end justify-between gap-3 px-4 md:px-10">
+          <div ref={dockRef} className="absolute inset-x-0 bottom-6 z-10 flex flex-wrap items-end justify-between gap-3 px-4 md:px-8">
             <div className="w-full sm:w-[420px]">
               <div className="relative flex items-center gap-3 bg-white/90 px-4 py-3 backdrop-blur" style={chamfer(14, "br")}>
                 <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center" style={{ background: INK, color: LIME }}>{modeIcon(leg.mode, "h-5 w-5")}</span>
@@ -853,6 +850,8 @@ export default function Routes() {
               </div>
             )}
           </div>
+        </div>
+      </div>
         </div>
       </div>
 

@@ -47,7 +47,6 @@ export function preloadCritical(onProgress: (p: number) => void): Promise<void> 
     () => document.fonts?.ready ?? Promise.resolve(),
     ...(slow ? [] : [heroVideo]),
     image("/assets/hero-port.webp"),
-    image("/assets/earth-brand-2k.jpg"),
     ...(mobile ? [] : ["truck", "ship", "train", "plane"].map((v) => image(`/assets/vehicles/${v}.webp`))),
   ];
   let n = 0;

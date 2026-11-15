@@ -2,31 +2,38 @@
 
 import { useState, useRef, useEffect } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import Link from "next/link";
+import Header from "./Header";
 import { useIntroDone } from "@/lib/intro";
-import { LogoHorizontal, WMark, chamfer, Button, IconPlane, IconShip, IconTrain, IconTruck, IconDoc, IconContainer, IconShield, IconClock, IconArrow } from "@/components/brand/design-system";
+import { LogoHorizontal, WMark, chamfer, IconPlane, IconShip, IconTrain, IconTruck, IconDoc, IconContainer, IconShield, IconClock } from "@/components/brand/design-system";
 import { SERIES, MILESTONES, KPIS, AXIS_MAX, SIDEBAR } from "@/data/landing";
 
 const EASE = [0.16, 1, 0.3, 1] as const;
-// TMS window open/close: one element folds on its top edge in 3D (transform + opacity only, GPU-cheap).
-const FOLD_OPEN = { rotateX: 0, scale: 1, y: 0, opacity: 1 };
-const FOLD_SHUT = { rotateX: -78, scale: 0.88, y: -12, opacity: 0 };
+// Glass buttons under the headline; text, icon and border turn brand lime on hover.
+const HERO_CTA = "wf-sub inline-flex min-h-11 items-center justify-center gap-3 border border-white/25 bg-white/10 px-5 text-xs font-bold text-white backdrop-blur transition-colors hover:border-volt-500 hover:bg-white/15 hover:text-volt-500";
 // Placeholder until real TMS screens are ready; flip to true to show the mock dashboard again.
 const SHOW_TMS_MOCK = false;
 
 export default function Hero() {
   const reduce = useReducedMotion();
   const introDone = useIntroDone(); // entrances start when the loader reveals the page
-  const [lang, setLang] = useState("EN");
   const [hover, setHover] = useState<{ ri: number; si: number } | null>(null);
   const [tourTip, setTourTip] = useState(true);
-  // macOS-style window controls on the product preview
-  const [closed, setClosed] = useState(true); // platform window starts closed
-  const [minimized, setMinimized] = useState(false);
+  // tms.weforward preview: a macOS-style window shown as a popup over a dimmed page
+  const [tmsOpen, setTmsOpen] = useState(false);
   const [zoomed, setZoomed] = useState(false);
-  const collapsed = closed || minimized;
-  const [genie, setGenie] = useState<null | "open" | "close">(null); // fold animation in progress
-  // Closed/minimised: the hero is one screen tall and the video fills it. Open: the video band stops
-  // `overlap` px above the hero bottom so the window runs past it into the page.
+  const tmsTrigger = useRef<HTMLButtonElement>(null);
+  const tmsClose = useRef<HTMLButtonElement>(null);
+  const closeTms = () => { setTmsOpen(false); setZoomed(false); };
+  useEffect(() => {
+    if (!tmsOpen) return;
+    const html = document.documentElement, prev = html.style.overflow;
+    html.style.overflow = "hidden"; // the page stays put under the popup
+    tmsClose.current?.focus();
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") closeTms(); };
+    window.addEventListener("keydown", onKey);
+    return () => { window.removeEventListener("keydown", onKey); html.style.overflow = prev; tmsTrigger.current?.focus(); };
+  }, [tmsOpen]);
   const videoDesktop = useRef<HTMLVideoElement>(null);
   const videoMobile = useRef<HTMLVideoElement>(null);
   useEffect(() => {
@@ -49,12 +56,13 @@ export default function Hero() {
             <div className="group/tl relative flex h-9 items-center px-1">
               <div className="relative z-10 flex items-center gap-2">
                 {([
-                  { key: "close", color: "#ff5f57", label: "Close preview window", onClick: () => { if (genie) return; if (reduce) { setClosed(true); setMinimized(false); setZoomed(false); } else setGenie("close"); }, glyph: <path d="M3.5 3.5l5 5M8.5 3.5l-5 5" /> },
-                  { key: "minimize", color: "#febc2e", label: minimized ? "Restore preview window" : "Minimise preview window", onClick: () => setMinimized((m) => !m), glyph: <path d="M3 6h6" /> },
-                  { key: "zoom", color: "#28c840", label: zoomed ? "Exit full width" : "Expand to full width", onClick: () => { setZoomed((z) => !z); setMinimized(false); }, glyph: <path d="M3.5 8.5V5l3.5 3.5H3.5zM8.5 3.5V7L5 3.5h3.5z" fill="currentColor" stroke="none" /> },
+                  { key: "close", color: "#ff5f57", label: "Close tms.weforward", onClick: closeTms, glyph: <path d="M3.5 3.5l5 5M8.5 3.5l-5 5" /> },
+                  { key: "minimize", color: "#febc2e", label: "Minimise tms.weforward", onClick: closeTms, glyph: <path d="M3 6h6" /> },
+                  { key: "zoom", color: "#28c840", label: zoomed ? "Exit full width" : "Expand to full width", onClick: () => setZoomed((z) => !z), glyph: <path d="M3.5 8.5V5l3.5 3.5H3.5zM8.5 3.5V7L5 3.5h3.5z" fill="currentColor" stroke="none" /> },
                 ] as const).map((b) => (
                   <button
                     key={b.key}
+                    ref={b.key === "close" ? tmsClose : undefined}
                     type="button"
                     data-anim={`window-${b.key}`}
                     aria-label={b.label}
@@ -95,13 +103,8 @@ export default function Hero() {
               </div>
             </div>
 
-            {/* ---- app body (collapses on minimise) ---- */}
-            <motion.div
-              initial={false}
-              animate={{ height: minimized ? 0 : "auto", opacity: minimized ? 0 : 1 }}
-              transition={{ duration: reduce ? 0 : 0.5, ease: EASE }}
-              style={{ overflow: "hidden" }}
-            >
+            {/* ---- app body ---- */}
+            <div style={{ overflow: "hidden" }}>
             {SHOW_TMS_MOCK ? (
             <div className="bg-white px-7 pb-0 pt-7" style={{ color: "#04042b" }}>
               <div className="flex items-start justify-between gap-4">
@@ -238,17 +241,19 @@ export default function Hero() {
               </div>
             </div>
             )}
-            </motion.div>
+            </div>
            </div>
             </div>
           </div>
   );
 
   return (
-    <section id="hero" className={`relative z-20 overflow-hidden transition-[min-height] duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none ${collapsed ? "min-h-[90svh]" : ""}`}>
+    <>
+    <Header />
+    <section id="hero" className="relative z-20 min-h-[90svh] overflow-hidden">
         {/* Full-bleed hero: the port video covers header, headline and the top of the product preview;
             the preview runs on past the video into the page (Flexport-style). Navy scrim for legibility. Reduced motion: no autoplay, poster only. */}
-        <div aria-hidden="true" className={`absolute inset-x-0 top-0 overflow-hidden ${collapsed ? "bottom-0" : "bottom-[180px] md:bottom-[280px]"}`} style={{ background: "#04042b", ...chamfer(72, "br") }}>
+        <div aria-hidden="true" className="absolute inset-0 overflow-hidden" style={{ background: "#04042b", ...chamfer(72, "br") }}>
           <div style={{ position: "absolute", inset: 0, backgroundImage: "url('/assets/hero-port.webp')", backgroundSize: "cover", backgroundPosition: "center 55%" }} />
           <video ref={videoDesktop} className="hidden md:block" src="/assets/hero-720.webm" poster="/assets/hero-port.webp" muted loop playsInline preload="none"
             style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", objectFit: "cover" }} />
@@ -257,35 +262,11 @@ export default function Hero() {
           <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(4,4,43,0.62) 0%, rgba(4,4,43,0.46) 45%, rgba(4,4,43,0.3) 100%)" }} />
         </div>
 
-        {/* header */}
-        <header id="header" className="relative z-20">
-          <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-5 py-4 md:gap-6 md:px-10">
-            <a href="#main" aria-label="WEFORWARD home"><LogoHorizontal size="sm" wordColor="#ffffff" /></a>
-            <nav aria-label="Main" className="hidden items-center gap-7 lg:flex">
-              {/* labels only for now — links get wired once the target pages/sections are decided */}
-              {["About us", "Services", "Track your cargo", "News", "Contact"].map((t) => (
-                <span key={t} className="wf-sub cursor-default whitespace-nowrap text-xs font-bold" style={{ color: "#ffffff" }}>{t}</span>
-              ))}
-            </nav>
-            <div className="flex items-center gap-3 md:gap-5">
-              <button
-                type="button"
-                data-anim="lang-switch"
-                onClick={() => setLang(lang === "EN" ? "KA" : "EN")}
-                aria-label={`Language: ${lang === "EN" ? "English" : "Georgian"}. Switch to ${lang === "EN" ? "Georgian" : "English"}`}
-                className="wf-sub inline-flex min-h-11 items-center gap-2 whitespace-nowrap text-xs font-bold transition-colors hover:text-volt-500"
-                style={{ color: "#ffffff" }}
-              >
-                <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M3 12h18M12 3c3 3.5 3 14.5 0 18M12 3c-3 3.5-3 14.5 0 18" /></svg>
-                {lang}
-              </button>
-              <Button id="nav-quote" href="#quote" variant="purple">Get a quote <IconArrow /></Button>
-            </div>
-          </div>
-        </header>
+        {/* room for the fixed header */}
+        <div aria-hidden="true" className="h-20" />
 
         {/* centred promise + inline quote capture */}
-        <div className="relative z-10 mx-auto max-w-4xl px-6 pb-10 pt-10 text-center md:pb-12 md:pt-14">
+        <div className="relative z-10 mx-auto max-w-4xl px-6 pb-10 pt-16 text-center md:pb-12 md:pt-24">
           <h1 className="sr-only">You deal. We deliver. Freight forwarding in Georgia.</h1>
           <div aria-hidden="true">
             {["You deal.", "We deliver."].map((line, i) => (
@@ -293,7 +274,7 @@ export default function Hero() {
                 <motion.div
                   data-anim={`hero-line-${i}`}
                   className="wf-head text-4xl md:text-6xl"
-                  style={{ color: i === 0 ? "#a296f7" : "#ffffff" }}
+                  style={{ color: i === 0 ? "var(--color-volt-500)" : "#ffffff" }}
                   initial={reduce ? false : { y: "110%" }}
                   animate={{ y: reduce || introDone ? "0%" : "110%" }}
                   transition={{ duration: 0.9, delay: reduce ? 0 : i * 0.08, ease: [0.16, 1, 0.3, 1] }}
@@ -313,53 +294,53 @@ export default function Hero() {
           </motion.div>
         </div>
 
-        {/* product preview — tms.weforward preview as a macOS-style window: close / minimise / zoom */}
+        {/* calls to action — Open TMS shows the tms.weforward window as a popup */}
         <motion.div
           data-anim="hero-dashboard"
-          className="relative z-10 mx-auto flex flex-col px-6 md:px-10"
-          initial={reduce ? false : { y: 40, maxWidth: 1152 }} // transform only: an opacity fade on an ancestor disables the button's backdrop blur until it ends
-          animate={{ y: reduce || introDone ? 0 : 40, maxWidth: zoomed ? 1440 : 1152 }}
-          transition={{ default: { duration: 1, delay: reduce ? 0 : 0.35, ease: EASE }, maxWidth: { duration: reduce ? 0 : 0.55, ease: EASE } }}
+          className="relative z-10 mx-auto flex max-w-6xl justify-center px-6 md:px-10"
+          initial={reduce ? false : { y: 40 }} // transform only: an opacity fade on an ancestor disables the buttons' backdrop blur until it ends
+          animate={{ y: reduce || introDone ? 0 : 40 }}
+          transition={{ duration: 1, delay: reduce ? 0 : 0.35, ease: EASE }}
         >
-          <AnimatePresence mode="popLayout" initial={false}>
-          {closed ? (
-            <motion.div
-              key="dock"
-              className="flex justify-center"
-              initial={{ y: 16, scale: 0.96 }}
-              animate={{ y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 16 }}
-              transition={{ duration: reduce ? 0 : 0.35, ease: EASE }}
-            >
-              <button
-                type="button"
-                data-anim="window-reopen"
-                onClick={() => { setClosed(false); if (!reduce) setGenie("open"); }}
-                className="wf-sub inline-flex min-h-11 items-center gap-3 border border-white/25 bg-white/10 px-5 text-xs font-bold text-white backdrop-blur transition-colors hover:bg-white/20"
-              >
-                <WMark className="h-5 w-5" color="#ffffff" /> Open tms.weforward
-              </button>
-            </motion.div>
-          ) : (
-          <motion.div key="window" className="relative" style={{ perspective: 1600 }} exit={{ opacity: 0, transition: { duration: 0 } }}>
-            <motion.div
-              style={{ transformOrigin: "50% 0%", willChange: genie ? "transform, opacity" : undefined }}
-              initial={reduce ? false : FOLD_SHUT}
-              animate={genie === "close" ? FOLD_SHUT : FOLD_OPEN}
-              transition={genie === "close"
-                ? { duration: 0.5, ease: [0.55, 0, 0.75, 0.3], opacity: { duration: 0.22, delay: 0.28, ease: "linear" } }
-                : { duration: 0.6, ease: [0.16, 1, 0.3, 1], opacity: { duration: 0.2, ease: "linear" } }}
-              onAnimationComplete={() => {
-                if (genie === "close") { setClosed(true); setMinimized(false); setZoomed(false); }
-                setGenie(null);
-              }}
-            >
-              {windowFrame}
-            </motion.div>
-          </motion.div>
-          )}
-          </AnimatePresence>
+          <div className="grid auto-cols-fr gap-3 sm:grid-flow-col">{/* equal-width buttons: side by side, stacked on phones */}
+            <button ref={tmsTrigger} type="button" data-anim="window-reopen" aria-haspopup="dialog" onClick={() => setTmsOpen(true)} className={HERO_CTA}>
+              Open TMS
+            </button>
+            <Link href="/track" data-anim="hero-track" className={HERO_CTA}>
+              Track your cargo
+            </Link>
+          </div>
         </motion.div>
       </section>
+
+    {/* tms.weforward popup: dimmed, lightly blurred page behind; Esc, the backdrop or the red/yellow lights close it */}
+    <AnimatePresence>
+      {tmsOpen && (
+        <motion.div
+          key="tms"
+          role="dialog"
+          aria-modal="true"
+          aria-label="tms.weforward"
+          className="fixed inset-0 z-[60] flex items-center justify-center p-4 md:p-8"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: reduce ? 0 : 0.25, ease: "linear" }}
+        >
+          <div aria-hidden="true" className="absolute inset-0 bg-ink-950/75 backdrop-blur-sm" onClick={closeTms} />
+          <motion.div
+            className="relative max-h-full w-full overflow-auto"
+            style={{ maxWidth: zoomed ? 1440 : 1152 }}
+            initial={reduce ? false : { opacity: 0, y: 24, scale: 0.94 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={reduce ? { opacity: 0 } : { opacity: 0, y: 12, scale: 0.97, transition: { duration: 0.2, ease: [0.4, 0, 1, 1] } }}
+            transition={{ duration: reduce ? 0 : 0.45, ease: EASE }}
+          >
+            {windowFrame}
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+    </>
   );
 }

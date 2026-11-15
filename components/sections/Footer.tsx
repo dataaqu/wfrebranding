@@ -1,27 +1,20 @@
 "use client";
 
 import { useRef } from "react";
-import { cubicBezier, motion, useMotionValue, useReducedMotion, useScroll, useTransform, type MotionValue } from "motion/react";
+import Link from "next/link";
+import dynamic from "next/dynamic";
+import { CONTACT, SOCIAL } from "@/lib/contact";
+import { cubicBezier, motion, useInView, useReducedMotion, type Variants } from "motion/react";
 
-import { chamfer, WMark, Wordmark } from "@/components/brand/design-system";
+// Isometric cube field behind the footer (three.js, ~600 KB): loaded only once the footer comes near,
+// and unmounted while it is far off screen so the WebGL loop never runs for nothing.
+const BackgroundCubesGrid = dynamic(() => import("@/components/ui/background-cubes-grid").then((m) => m.BackgroundCubesGrid), { ssr: false });
+
 
 // Contact details as published on weforward.ge.
 const NAVY = "#04042b";
-// same items as the header nav; labels only until the links are decided
-const EXPLORE = ["About us", "Services", "Track your cargo", "News", "Contact"];
-const CONTACT = [
-  ["sales@weforward.ge", "mailto:sales@weforward.ge"],
-  ["+995 591 32 12 92", "tel:+995591321292"],
-  ["+995 593 18 81 98", "tel:+995593188198"],
-  ["Tbilisi, G. Kartozia #8", "https://maps.app.goo.gl/CgzwPiYwyA9986ta9"],
-];
-// TODO: Instagram URL not published on weforward.ge yet — set it here.
-const INSTAGRAM_URL = "https://www.instagram.com/";
-const SOCIAL: { name: string; href: string; d: string }[] = [
-  { name: "Facebook", href: "https://www.facebook.com/weforwardllc", d: "M13.5 21v-7.5h2.6l.4-3h-3V8.6c0-.9.3-1.5 1.5-1.5h1.6V4.4c-.3 0-1.2-.1-2.3-.1-2.3 0-3.9 1.4-3.9 4v2.2H7.8v3h2.6V21h3.1Z" },
-  { name: "Instagram", href: INSTAGRAM_URL, d: "M12 7.4a4.6 4.6 0 1 0 0 9.2 4.6 4.6 0 0 0 0-9.2Zm0 7.6a3 3 0 1 1 0-6 3 3 0 0 1 0 6Zm4.8-8.9a1.1 1.1 0 1 0 0 2.2 1.1 1.1 0 0 0 0-2.2ZM12 3.5c-2.3 0-2.6 0-3.5.05-2.4.1-3.8 1.5-3.9 3.9C4.5 8.4 4.5 8.7 4.5 12s0 3.6.05 4.5c.1 2.4 1.5 3.8 3.9 3.9.9.05 1.2.05 3.5.05s2.6 0 3.5-.05c2.4-.1 3.8-1.5 3.9-3.9.05-.9.05-1.2.05-4.5s0-3.6-.05-4.5c-.1-2.4-1.5-3.8-3.9-3.9C14.6 3.5 14.3 3.5 12 3.5Zm0 1.5c2.3 0 2.5 0 3.4.05 1.6.07 2.5.9 2.5 2.5.05.9.05 1.1.05 4.45s0 3.55-.05 4.45c-.07 1.6-.9 2.5-2.5 2.5-.9.05-1.1.05-3.4.05s-2.5 0-3.4-.05c-1.6-.07-2.5-.9-2.5-2.5C6 15.55 6 15.35 6 12s0-3.55.05-4.45c.07-1.6.9-2.5 2.5-2.5C9.5 5 9.7 5 12 5Z" },
-  { name: "LinkedIn", href: "https://www.linkedin.com/company/weforward/", d: "M6.9 8.9H3.8V20h3.1V8.9ZM5.35 4a1.8 1.8 0 1 0 0 3.6 1.8 1.8 0 0 0 0-3.6ZM20.2 13.6c0-3-.65-5-4.1-5-1.66 0-2.77.9-3.22 1.77h-.05V8.9H9.9V20H13v-5.5c0-1.45.27-2.85 2.07-2.85 1.77 0 1.8 1.66 1.8 2.94V20h3.1l.23-6.4Z" },
-];
+// same pages as the header nav (sub-pages listed after their parent)
+const EXPLORE: [string, string][] = [["About us", "/about"], ["Career", "/career"], ["Services", "/services"], ["Track your cargo", "/track"], ["Blog", "/blog"], ["Contact", "/contact"]];
 
 /** Fast scroll to the top with a slow landing (≈0.6-1.15s by distance),
  *  cancelled as soon as the visitor scrolls, touches or presses a key. */
@@ -47,78 +40,60 @@ function scrollToTop() {
   raf = requestAnimationFrame(step);
 }
 
-// Branded containers parked along the bottom edge (AI-rendered blank boxes, real logo overlaid in code).
-const BOXES = [
-  { src: "purple40", w: 1222, mark: "#ffffff", word: "#ffffff", lift: 6 },
-  { src: "white20", w: 728, mark: "#644ff2", word: "#04042b", lift: 0 },
-  { src: "lime20", w: 738, mark: "#04042b", word: "#04042b", lift: 11 },
-  { src: "purple20", w: 822, mark: "#ffffff", word: "#ffffff", lift: 2 },
-  { src: "white20", w: 728, mark: "#644ff2", word: "#04042b", lift: 9 },
-  { src: "purple40", w: 1222, mark: "#ffffff", word: "#ffffff", lift: 0 },
-  { src: "lime20", w: 738, mark: "#04042b", word: "#04042b", lift: 5 },
-];
-const BOX_H = 300; // source image height
+// Card outline: top corners cut (brand chamfer); the middle of the top edge sits lower, reached by two
+// short slopes, so the footer reads as a tab-cut panel rising out of the page bottom.
+const NOTCH = "polygon(0 var(--cut), var(--cut) 0, 24% 0, calc(24% + var(--slope)) var(--dip), calc(76% - var(--slope)) var(--dip), 76% 0, calc(100% - var(--cut)) 0, 100% var(--cut), 100% 100%, 0 100%)";
+// Entrance (once, when the footer scrolls into view): the panel rises, then its columns follow in turn.
+const EASE_OUT = [0.16, 1, 0.3, 1] as const;
+const CARD: Variants = {
+  hidden: { y: 160 },
+  show: { y: 0, transition: { duration: 1, ease: EASE_OUT, delayChildren: 0.2, staggerChildren: 0.08 } },
+};
+const ITEM: Variants = {
+  hidden: { opacity: 0, y: 28 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.7, ease: EASE_OUT } },
+};
 
-/** One container: rises out of the bottom edge as the footer scrolls in (staggered by index). */
-function Box({ b, i, progress }: { b: (typeof BOXES)[number]; i: number; progress: MotionValue<number> }) {
-  const start = 0.08 * Math.abs(i - 3); // centre box first, then outward
-  const y = useTransform(progress, [start, start + 0.55], ["70%", "0%"]);
+function Col({ title, children, className }: { title: string; children: React.ReactNode; className?: string }) {
   return (
-    <motion.div className="relative shrink-0 hover:z-10" style={{ y, height: "var(--box-h)", width: `calc(var(--box-h) * ${b.w / BOX_H})`, marginTop: b.lift }}>
-      <div className="relative h-full w-full transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-3">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={`/assets/containers/${b.src}.webp`} alt="" loading="lazy" decoding="async" draggable={false} className="absolute inset-0 h-full w-full select-none" />
-        <div className="absolute inset-0 flex flex-col items-center justify-start gap-[6%] pt-[13%]">
-          <WMark className="h-[30%] w-auto" color={b.mark} />
-          <Wordmark className="h-[11%] w-auto" color={b.word} />
-        </div>
-      </div>
-    </motion.div>
-  );
-}
-
-function ContainerRow() {
-  const ref = useRef<HTMLDivElement>(null);
-  const reduce = useReducedMotion();
-  const { scrollYProgress } = useScroll({ target: ref, offset: ["start end", "end end"] });
-  const still = useMotionValue(1);
-  return (
-    <div ref={ref} aria-hidden="true" className="relative mt-8 h-[78px] [clip-path:inset(-48px_0_0_0)] [--box-h:96px] md:h-[100px] md:[--box-h:122px]">
-      <div className="absolute left-1/2 top-0 flex -translate-x-1/2 gap-4 md:gap-5">
-        {BOXES.map((b, i) => <Box key={i} b={b} i={i} progress={reduce ? still : scrollYProgress} />)}
-      </div>
-    </div>
-  );
-}
-
-function Col({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div>
+    <motion.div variants={ITEM} className={className}>
       <p className="wf-sub text-[11px] font-bold tracking-[0.16em] text-white/40">{title}</p>
       <ul className="mt-5 space-y-3">{children}</ul>
-    </div>
+    </motion.div>
   );
 }
 const LINK = "group inline-flex items-center gap-1.5 text-[15px] text-white/75 transition-colors duration-200 hover:text-white";
 
 export default function Footer() {
-
+  const reduce = useReducedMotion();
+  const ref = useRef<HTMLElement>(null);
+  const near = useInView(ref, { margin: "400px 0px" });
   return (
-    <footer id="footer" className="relative isolate overflow-hidden text-white">
-      <div aria-hidden="true" className="absolute inset-0 -z-10" style={{ background: NAVY, ...chamfer(56, "tl") }} />
+    // overflow-hidden: while the panel waits below its resting place it must not add scroll height
+    <footer ref={ref} id="footer" className="overflow-hidden bg-white pt-10 md:pt-16">
+      <motion.div className="relative isolate text-white [--cut:14px] [--dip:18px] [--slope:40px] md:[--cut:18px] md:[--dip:28px] md:[--slope:72px]"
+        variants={CARD} initial={reduce ? false : "hidden"} whileInView="show" viewport={{ once: true, amount: 0.15 }}>
+      <div aria-hidden="true" className="absolute inset-0 -z-10 overflow-hidden" style={{ background: NAVY, clipPath: NOTCH }}>
+        {/* a quiet version of the effect: brand navies, low waves, a faint purple glow. No seams and no idle
+            ripples, so at rest it is plain navy; the cubes only show where the pointer stirs them. */}
+        {near && (
+          <BackgroundCubesGrid topColor={NAVY} leftColor="#0e0e47" rightColor="#08083a" glowColor="#463dc1" amplitude={0.25} glow={0.12} gap={0} idleRipples={false} />
+        )}
+      </div>
 
-      <div className="mx-auto max-w-6xl px-6 pt-20 md:px-10 md:pt-28">
+      {/* the panel spans the full screen, so its content runs wider than the page sections */}
+      <div className="mx-auto max-w-[1600px] px-6 pt-20 md:px-10 md:pt-28 lg:px-16">
         {/* logo + three link columns, four equal tracks */}
         <div className="grid grid-cols-2 gap-x-10 gap-y-12 lg:grid-cols-4">
-          <div className="col-span-2 lg:col-span-1">
+          <motion.div variants={ITEM} className="col-span-2 lg:col-span-1">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/assets/logos/logo-footer.webp" alt="WEFORWARD - You deal. We deliver." width={500} height={240} className="h-20 w-auto md:h-24" />
-          </div>
+          </motion.div>
 
             <Col title="EXPLORE">
-              {EXPLORE.map((t) => <li key={t}><span className="cursor-default text-[15px] text-white/75">{t}</span></li>)}
+              {EXPLORE.map(([t, h]) => <li key={h}><Link href={h} className={LINK}>{t}</Link></li>)}
             </Col>
-            <Col title="CONTACT">
+            <Col title="CONTACT" className="max-sm:col-span-2">{/* full row on phones: the email and phone numbers need the width */}
               {CONTACT.map(([t, h]) => (
                 <li key={h}><a href={h} {...(h.startsWith("http") ? { target: "_blank", rel: "noopener noreferrer" } : {})} className={`${LINK} whitespace-nowrap`}>{t}</a></li>
               ))}
@@ -136,7 +111,7 @@ export default function Footer() {
         </div>
 
         {/* bottom bar */}
-        <div className="mt-20 flex flex-wrap items-center justify-between gap-4 border-t border-white/10 pb-4 pt-6 text-[13px] text-white/45">
+        <motion.div variants={ITEM} className="mt-20 flex flex-wrap items-center justify-between gap-4 border-t border-white/10 pb-24 pt-6 md:pb-28 text-[13px] text-white/45">
           <span>© {new Date().getFullYear()} WEFORWARD LLC. All rights reserved.</span>
           <button type="button" onClick={scrollToTop}
             className="group inline-flex items-center gap-3 text-[13px] text-white/60 outline-none transition-colors duration-200 hover:text-white focus-visible:text-white">
@@ -147,9 +122,9 @@ export default function Footer() {
               <svg viewBox="0 0 24 24" className="absolute h-4 w-4 translate-y-8 transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:translate-y-0" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="M12 19V5M6 11l6-6 6 6" /></svg>
             </span>
           </button>
-        </div>
+        </motion.div>
       </div>
-      <ContainerRow />
+      </motion.div>
     </footer>
   );
 }
