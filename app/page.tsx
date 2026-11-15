@@ -16,9 +16,9 @@ export default function Page() {
     <BrandFonts /><Intro />
     <Hero />
     <Facts />
-    <Routes />
-    <Services />
     <Network />
+    <Services />
+    <Routes />
     <Footer />
   </main>;
 }
