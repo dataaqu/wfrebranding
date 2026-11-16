@@ -13,8 +13,20 @@ export const NAV: NavItem[] = [
   { label: "Services", href: "/services" },
   { label: "Track your cargo", href: "/track" },
   { label: "Blog", href: "/blog" },
+  { label: "FAQ", href: "/contact#faq" }, // section of the contact page, not its own page
   { label: "Contact", href: "/contact" },
 ];
+/** A link to a section of the page we are already on (e.g. FAQ while on /contact#faq): the router sees no
+ *  change and would not move, so scroll to the section ourselves. */
+function sameHash(e: React.MouseEvent, href: string) {
+  const [path, hash] = href.split("#");
+  if (!hash || path !== location.pathname) return;
+  const el = document.getElementById(hash);
+  if (!el) return;
+  e.preventDefault();
+  history.replaceState(history.state, "", href);
+  el.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+}
 const SHADOW = { textShadow: "0 1px 10px rgba(4,4,43,0.45)" };
 
 /** Site header (Flexport-style): fixed; slides away on scroll down, back in on scroll up with a solid navy
@@ -82,12 +94,12 @@ export default function Header({ solid: alwaysSolid = false }: { solid?: boolean
       {/* the hero video changes colour scene to scene: a navy fade behind the bar keeps logo and links readable on any frame */}
       {!alwaysSolid && <div aria-hidden="true" className="wf-header-scrim pointer-events-none absolute inset-x-0 top-0 h-40" style={{ background: "linear-gradient(180deg, rgba(4,4,43,0.75) 0%, rgba(4,4,43,0.45) 50%, rgba(4,4,43,0) 100%)" }} />}
       <div aria-hidden="true" className="wf-header-bg absolute inset-0" style={{ background: "#04042b", opacity: alwaysSolid ? 1 : 0 }} />
-      <div className="relative mx-auto flex h-20 max-w-6xl items-center justify-between gap-3 px-5 md:gap-6 md:px-10">
+      <div className="relative mx-auto flex h-20 max-w-[1360px] items-center justify-between gap-3 px-5 md:gap-6 md:px-10 lg:gap-4 lg:px-6 xl:gap-6 xl:px-10">{/* tighter at 1024–1279 so six nav items + CTA fit */}
         <Link href="/" aria-label="WEFORWARD home"><span className="md:hidden"><LogoHorizontal size="sm" wordColor="#ffffff" /></span><span className="hidden md:inline-flex"><LogoHorizontal size="md" wordColor="#ffffff" /></span></Link>
-        <nav ref={navRef} aria-label="Main" className="relative hidden items-center gap-5 py-4 lg:flex xl:gap-8" style={SHADOW}>
+        <nav ref={navRef} aria-label="Main" className="relative hidden items-center gap-3.5 py-4 lg:flex xl:gap-8" style={SHADOW}>
           {NAV.map(({ label, href, children }) => {
             const cls = "wf-sub whitespace-nowrap text-[13px] font-bold transition-colors hover:text-volt-500 xl:text-sm";
-            if (!children) return <Link key={label} href={href} data-nav-item className={cls} style={{ color: "#ffffff" }}>{label}</Link>;
+            if (!children) return <Link key={label} href={href} data-nav-item onClick={(e) => sameHash(e, href)} className={cls} style={{ color: "#ffffff" }}>{label}</Link>;
             return (
               <div key={label} className="group/dd relative">
                 <Link href={href} data-nav-item aria-haspopup="true" className={`${cls} inline-flex items-center gap-1.5`} style={{ color: "#ffffff" }}>

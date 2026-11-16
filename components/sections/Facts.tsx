@@ -22,15 +22,17 @@ export default function Facts() {
           ))}
         </Reveal>
         <Reveal id="about-photo" delay={0.1}>
-          {/* placeholder: Unsplash photo by Annie Spratt (photo-1522071820081-009f0129c71c) */}
+          {/* team photo, WebP in two sizes; shown at its own 16:9 so nobody at the edges is cropped */}
           <img
-            src="/assets/about-team.jpg"
-            alt="A team working together at a table with laptops"
+            src="/assets/about-team-1600.webp"
+            srcSet="/assets/about-team-800.webp 800w, /assets/about-team-1600.webp 1600w"
+            sizes="(min-width: 768px) 50vw, 100vw"
+            alt="The WEFORWARD team standing together in an office corridor"
             width={1600}
-            height={1067}
+            height={897}
             loading="lazy"
             decoding="async"
-            className="aspect-[4/3] w-full object-cover"
+            className="aspect-[1600/897] w-full object-cover"
             style={chamfer(40, "tr")}
           />
         </Reveal>

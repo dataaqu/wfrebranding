@@ -36,7 +36,7 @@ const FAQ = [
 export default function Faq() {
   const [open, setOpen] = useState<number | null>(0);
   return (
-    <section id="faq" aria-labelledby="faq-title" className="bg-white px-6 pb-32 pt-10 md:px-10">
+    <section id="faq" aria-labelledby="faq-title" className="scroll-mt-24 bg-white px-6 pb-32 pt-10 md:px-10">{/* scroll-mt: anchor jumps land below the fixed header */}
       <div className="mx-auto max-w-[1280px]">
         <Reveal id="faq-head" className="flex flex-wrap items-end gap-x-5 gap-y-2">
           <h2 id="faq-title" className="wf-head text-4xl leading-none md:text-6xl" style={{ color: NAVY }}>Questions? Answered.</h2>

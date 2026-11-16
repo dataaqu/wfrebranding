@@ -250,7 +250,7 @@ export default function Hero() {
   return (
     <>
     <Header />
-    <section id="hero" className="relative z-20 min-h-[90svh] overflow-hidden">
+    <section id="hero" className="relative z-20 flex min-h-[90svh] flex-col justify-center overflow-hidden pb-20 pt-20">{/* pt-20: room for the fixed header; the copy + buttons sit centred in what is left */}
         {/* Full-bleed hero: the port video covers header, headline and the top of the product preview;
             the preview runs on past the video into the page (Flexport-style). Navy scrim for legibility. Reduced motion: no autoplay, poster only. */}
         <div aria-hidden="true" className="absolute inset-0 overflow-hidden" style={{ background: "#04042b", ...chamfer(72, "br") }}>
@@ -262,11 +262,9 @@ export default function Hero() {
           <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(4,4,43,0.62) 0%, rgba(4,4,43,0.46) 45%, rgba(4,4,43,0.3) 100%)" }} />
         </div>
 
-        {/* room for the fixed header */}
-        <div aria-hidden="true" className="h-20" />
 
         {/* centred promise + inline quote capture */}
-        <div className="relative z-10 mx-auto max-w-4xl px-6 pb-10 pt-16 text-center md:pb-12 md:pt-24">
+        <div className="relative z-10 mx-auto max-w-4xl px-6 pb-10 text-center md:pb-12">
           <h1 className="sr-only">You deal. We deliver. Freight forwarding in Georgia.</h1>
           <div aria-hidden="true">
             {["You deal.", "We deliver."].map((line, i) => (
