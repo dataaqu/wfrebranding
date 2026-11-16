@@ -13,8 +13,8 @@ const ABOUT = [
 
 export default function Facts() {
   return (
-    <section id="about" aria-labelledby="about-title" className="relative z-10 bg-white py-24 md:py-32">
-      <div className="mx-auto grid max-w-[1360px] items-center gap-12 px-6 md:grid-cols-2 md:gap-14 md:px-10">
+    <section id="about" aria-labelledby="about-title" className="relative z-10 bg-white py-16 md:py-24">
+      <div className="mx-auto grid max-w-[1600px] items-center gap-12 px-6 md:grid-cols-2 md:gap-14 md:px-10 lg:px-16">
         <Reveal id="about-copy">
           <h2 id="about-title" className="wf-head text-4xl md:text-5xl" style={{ color: NAVY }}>The team behind your cargo</h2>
           {ABOUT.map((t) => (

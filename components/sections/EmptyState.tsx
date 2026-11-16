@@ -7,7 +7,7 @@ import { WMark, chamfer } from "@/components/brand/design-system";
 export default function EmptyState({ title, text, cta }: { title: string; text: string; cta?: { label: string; href: string } }) {
   return (
     <section className="bg-white pb-28">
-      <div className="mx-auto max-w-[1360px] px-6 md:px-10">
+      <div className="mx-auto max-w-[1600px] px-6 md:px-10 lg:px-16">
         <div className="flex flex-col items-start gap-6 bg-[#f8f7ff] px-8 py-14 md:flex-row md:items-center md:justify-between md:px-14 md:py-20" style={chamfer(32, "tr")}>
           <div className="flex items-start gap-6">
             <WMark className="h-12 w-auto shrink-0" />

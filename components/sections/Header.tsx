@@ -94,7 +94,7 @@ export default function Header({ solid: alwaysSolid = false }: { solid?: boolean
       {/* the hero video changes colour scene to scene: a navy fade behind the bar keeps logo and links readable on any frame */}
       {!alwaysSolid && <div aria-hidden="true" className="wf-header-scrim pointer-events-none absolute inset-x-0 top-0 h-40" style={{ background: "linear-gradient(180deg, rgba(4,4,43,0.75) 0%, rgba(4,4,43,0.45) 50%, rgba(4,4,43,0) 100%)" }} />}
       <div aria-hidden="true" className="wf-header-bg absolute inset-0" style={{ background: "#04042b", opacity: alwaysSolid ? 1 : 0 }} />
-      <div className="relative mx-auto flex h-20 max-w-[1360px] items-center justify-between gap-3 px-5 md:gap-6 md:px-10 lg:gap-4 lg:px-6 xl:gap-6 xl:px-10">{/* tighter at 1024–1279 so six nav items + CTA fit */}
+      <div className="relative mx-auto flex h-20 max-w-[1600px] items-center justify-between gap-3 px-5 md:gap-6 md:px-10 lg:gap-4 lg:px-6 xl:gap-6 xl:px-16">{/* tighter at 1024–1279 so six nav items + CTA fit */}
         <Link href="/" aria-label="WEFORWARD home"><span className="md:hidden"><LogoHorizontal size="sm" wordColor="#ffffff" /></span><span className="hidden md:inline-flex"><LogoHorizontal size="md" wordColor="#ffffff" /></span></Link>
         <nav ref={navRef} aria-label="Main" className="relative hidden items-center gap-3.5 py-4 lg:flex xl:gap-8" style={SHADOW}>
           {NAV.map(({ label, href, children }) => {

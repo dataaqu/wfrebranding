@@ -1,15 +1,8 @@
 "use client";
 
-import { useRef } from "react";
 import Link from "next/link";
-import dynamic from "next/dynamic";
 import { CONTACT, SOCIAL } from "@/lib/contact";
-import { cubicBezier, motion, useInView, useReducedMotion, type Variants } from "motion/react";
-
-// Isometric cube field behind the footer (three.js, ~600 KB): loaded only once the footer comes near,
-// and unmounted while it is far off screen so the WebGL loop never runs for nothing.
-const BackgroundCubesGrid = dynamic(() => import("@/components/ui/background-cubes-grid").then((m) => m.BackgroundCubesGrid), { ssr: false });
-
+import { cubicBezier, motion, useReducedMotion, type Variants } from "motion/react";
 
 // Contact details as published on weforward.ge.
 const NAVY = "#04042b";
@@ -66,23 +59,15 @@ const LINK = "group inline-flex items-center gap-1.5 text-[15px] text-white/75 t
 
 export default function Footer() {
   const reduce = useReducedMotion();
-  const ref = useRef<HTMLElement>(null);
-  const near = useInView(ref, { margin: "400px 0px" });
   return (
     // overflow-hidden: while the panel waits below its resting place it must not add scroll height
-    <footer ref={ref} id="footer" className="overflow-hidden bg-white pt-10 md:pt-16">
+    <footer id="footer" className="overflow-hidden bg-white pt-10 md:pt-16">
       <motion.div className="relative isolate text-white [--cut:14px] [--dip:18px] [--slope:40px] md:[--cut:18px] md:[--dip:28px] md:[--slope:72px]"
         variants={CARD} initial={reduce ? false : "hidden"} whileInView="show" viewport={{ once: true, amount: 0.15 }}>
-      <div aria-hidden="true" className="absolute inset-0 -z-10 overflow-hidden" style={{ background: NAVY, clipPath: NOTCH }}>
-        {/* a quiet version of the effect: brand navies, low waves, a faint purple glow. No seams and no idle
-            ripples, so at rest it is plain navy; the cubes only show where the pointer stirs them. */}
-        {near && (
-          <BackgroundCubesGrid topColor={NAVY} leftColor="#0e0e47" rightColor="#08083a" glowColor="#463dc1" amplitude={0.25} glow={0.12} gap={0} idleRipples={false} />
-        )}
-      </div>
+      <div aria-hidden="true" className="absolute inset-0 -z-10" style={{ background: NAVY, clipPath: NOTCH }} />
 
       {/* the panel spans the full screen, so its content runs wider than the page sections */}
-      <div className="mx-auto max-w-[1600px] px-6 pt-20 md:px-10 md:pt-28 lg:px-16">
+      <div className="mx-auto max-w-[1600px] px-6 pt-14 md:px-10 md:pt-16 lg:px-16">
         {/* logo + three link columns, four equal tracks */}
         <div className="grid grid-cols-2 gap-x-10 gap-y-12 lg:grid-cols-4">
           <motion.div variants={ITEM} className="col-span-2 lg:col-span-1">
@@ -111,7 +96,7 @@ export default function Footer() {
         </div>
 
         {/* bottom bar */}
-        <motion.div variants={ITEM} className="mt-20 flex flex-wrap items-center justify-between gap-4 border-t border-white/10 pb-24 pt-6 md:pb-28 text-[13px] text-white/45">
+        <motion.div variants={ITEM} className="mt-12 flex flex-wrap items-center justify-between gap-4 border-t border-white/10 pb-24 pt-6 md:pb-24 text-[13px] text-white/45">
           <span>© {new Date().getFullYear()} WEFORWARD LLC. All rights reserved.</span>
           <button type="button" onClick={scrollToTop}
             className="group inline-flex items-center gap-3 text-[13px] text-white/60 outline-none transition-colors duration-200 hover:text-white focus-visible:text-white">

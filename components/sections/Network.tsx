@@ -49,13 +49,13 @@ function GroupTitle({ children }: { children: string }) {
 
 export default function Network() {
   return (
-    <section id="network" aria-labelledby="network-title" className="overflow-hidden bg-white py-24 md:py-32">
-      <div className="mx-auto max-w-[1360px] px-6 md:px-10">
-        <Reveal id="network-head" className="mx-auto max-w-3xl text-center">
-          <h2 id="network-title" className="wf-head text-balance text-4xl leading-[1.05] md:text-6xl" style={{ color: NAVY }}>A global network behind every shipment</h2>
+    <section id="network" aria-labelledby="network-title" className="overflow-hidden bg-white pb-16 pt-8 md:pb-24 md:pt-12">
+      <div className="mx-auto max-w-[1600px] px-6 md:px-10 lg:px-16">
+        <Reveal id="network-head" className="mx-auto max-w-5xl text-center">
+          <h2 id="network-title" className="wf-head text-balance text-4xl leading-[1.05] md:text-5xl" style={{ color: NAVY }}>A global network behind every shipment</h2>
         </Reveal>
 
-        <div className="mt-16 md:mt-20">
+        <div className="mt-10 md:mt-12">
           <GroupTitle>Network memberships</GroupTitle>
           <ul className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
             {MEMBERSHIPS.map((m) => <li key={m.src}><Tile logo={m} className="h-32 md:h-40" /></li>)}
@@ -69,7 +69,7 @@ export default function Network() {
 
       {/* carriers: a slow, endless row that pauses under the pointer; reduced motion gets a static wrapped grid */}
       <div className="group mt-6 [mask-image:linear-gradient(to_right,transparent,#000_8%,#000_92%,transparent)] motion-reduce:[mask-image:none]">
-        <ul className="wf-marquee flex w-max gap-4 motion-reduce:mx-auto motion-reduce:w-auto motion-reduce:max-w-[1360px] motion-reduce:flex-wrap motion-reduce:justify-center motion-reduce:px-6 md:motion-reduce:px-10">
+        <ul className="wf-marquee flex w-max gap-4 motion-reduce:mx-auto motion-reduce:w-auto motion-reduce:max-w-[1600px] motion-reduce:flex-wrap motion-reduce:justify-center motion-reduce:px-6 md:motion-reduce:px-10 lg:motion-reduce:px-16">
           {[...CARRIERS, ...CARRIERS].map((c, i) => {
             const copy = i >= CARRIERS.length; // second pass only closes the loop
             return (

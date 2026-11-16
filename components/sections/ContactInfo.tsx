@@ -23,7 +23,7 @@ const LINK = "text-base font-medium underline-offset-4 transition-colors hover:t
 export default function ContactInfo() {
   return (
     <section id="contact-details" aria-labelledby="contact-details-title" className="bg-white pb-24 md:pb-28">
-      <div className="mx-auto grid max-w-[1360px] items-stretch gap-10 px-6 md:px-10 lg:grid-cols-2 lg:gap-14">
+      <div className="mx-auto grid max-w-[1600px] items-stretch gap-10 px-6 md:px-10 lg:grid-cols-2 lg:gap-14 lg:px-16">
         <Reveal id="contact-details-copy">
           <h2 id="contact-details-title" className="wf-head text-balance text-4xl md:text-5xl" style={{ color: NAVY }}>Let&apos;s build your logistics solution</h2>
           <p className="mt-5 max-w-lg text-base leading-7 text-[#4b4b66]">Our team is ready to optimize your supply chain and accelerate your business growth.</p>

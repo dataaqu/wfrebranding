@@ -96,8 +96,8 @@ export default function Contact() {
   }
 
   return (
-    <section id="quote" aria-labelledby="quote-title" className="bg-white px-6 pb-28 pt-10 md:px-10">
-      <div className="relative isolate mx-auto grid max-w-[1280px] overflow-hidden lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]">
+    <section id="quote" aria-labelledby="quote-title" className="bg-white px-6 pb-28 pt-10 md:px-10 lg:px-16">
+      <div className="relative isolate mx-auto grid max-w-[1472px] overflow-hidden lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]">
         <div aria-hidden="true" className="absolute inset-0 -z-10 bg-[#f8f7ff]" style={chamfer(40, "tr")} />
 
         {/* brand panel */}

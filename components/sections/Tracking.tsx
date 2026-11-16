@@ -101,7 +101,7 @@ export default function Tracking() {
 
   return (
     <section id="tracking" aria-labelledby="tracking-title" className="bg-white pb-24 pt-10">
-      <div className="mx-auto max-w-6xl px-6 md:px-10">
+      <div className="mx-auto max-w-[1600px] px-6 md:px-10 lg:px-16">
         <div className="flex flex-wrap items-end justify-between gap-6">
           <Reveal id="tracking-head"><h2 id="tracking-title" className="wf-head text-4xl md:text-6xl" style={{ color: NAVY }}>Track your cargo</h2></Reveal>
           <p className="max-w-sm text-sm leading-6 text-[#4b4b66]">Container, air waybill, vessel or flight. Open the right official tracker from one place.</p>

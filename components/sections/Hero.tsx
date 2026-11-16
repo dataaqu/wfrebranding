@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import Link from "next/link";
 import Header from "./Header";
+import { cn } from "@/lib/utils";
 import { useIntroDone } from "@/lib/intro";
 import { LogoHorizontal, WMark, chamfer, IconPlane, IconShip, IconTrain, IconTruck, IconDoc, IconContainer, IconShield, IconClock } from "@/components/brand/design-system";
 import { SERIES, MILESTONES, KPIS, AXIS_MAX, SIDEBAR } from "@/data/landing";
@@ -301,7 +302,7 @@ export default function Hero() {
           transition={{ duration: 1, delay: reduce ? 0 : 0.35, ease: EASE }}
         >
           <div className="grid auto-cols-fr gap-3 sm:grid-flow-col">{/* equal-width buttons: side by side, stacked on phones */}
-            <button ref={tmsTrigger} type="button" data-anim="window-reopen" aria-haspopup="dialog" onClick={() => setTmsOpen(true)} className={HERO_CTA}>
+            <button ref={tmsTrigger} type="button" data-anim="window-reopen" aria-haspopup="dialog" onClick={() => setTmsOpen(true)} className={cn(HERO_CTA, "hover:bg-volt-500 hover:text-ink-950")}>{/* this one fills solid lime on hover */}
               Open TMS
             </button>
             <Link href="/track" data-anim="hero-track" className={HERO_CTA}>

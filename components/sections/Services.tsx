@@ -99,8 +99,8 @@ export default function Services({ heading = true }: { heading?: boolean }) {
   const next = () => setActive((a) => (a + 1) % SERVICES.length);
 
   return (
-    <section ref={sectionRef} id="services" aria-labelledby={heading ? "services-title" : undefined} aria-label={heading ? undefined : "Services"} className={`bg-white ${heading ? "py-20 md:py-28" : "pb-20 md:pb-28"}`}>
-      <div className="mx-auto grid max-w-[1360px] items-start gap-12 px-6 md:px-10 lg:grid-cols-2 lg:gap-14">
+    <section ref={sectionRef} id="services" aria-labelledby={heading ? "services-title" : undefined} aria-label={heading ? undefined : "Services"} className={`bg-white ${heading ? "py-16 md:py-24" : "pb-16 md:pb-24"}`}>
+      <div className="mx-auto grid max-w-[1600px] items-start gap-12 px-6 md:px-10 lg:grid-cols-2 lg:gap-14 lg:px-16">
         <div className="lg:order-1">
           {heading && <Reveal id="services-head"><h2 id="services-title" className="wf-head text-4xl md:text-6xl" style={{ color: NAVY }}>Services</h2></Reveal>}
           <ul className={`${heading ? "mt-10" : ""} border-b border-[#e7e6f0]`}>

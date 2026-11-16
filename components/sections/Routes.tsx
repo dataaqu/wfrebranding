@@ -552,8 +552,8 @@ export default function Routes() {
   const pct = Math.round(((legIndex + 1) / route.legs.length) * 100);
 
   return (
-    <section id="routes" className="relative pb-10 pt-16 md:pt-24" style={{ background: "linear-gradient(to bottom, #f8f7ff 0, #f8f7ff calc(100% - 200px), #ffffff 100%)", color: INK }}>
-      <div className="mx-auto max-w-[1360px] px-6 md:px-10">
+    <section id="routes" className="relative overflow-x-clip pb-10 pt-16 md:pt-24" style={{ background: "linear-gradient(to bottom, #f8f7ff 0, #f8f7ff calc(100% - 200px), #ffffff 100%)", color: INK }}>
+      <div className="mx-auto max-w-[1600px] px-6 md:px-10 lg:px-16">
         <div className="flex flex-wrap items-end justify-between gap-6">
           <Reveal id="routes-head">
             <h2 className="sr-only">Your route. In focus.</h2>
@@ -566,10 +566,10 @@ export default function Routes() {
         </div>
 
 
-        {/* desktop: map on the left, the controls in a column on the right; phones/tablets: controls, then map */}
-        <div className="mt-10 grid gap-6 lg:grid-cols-[minmax(0,1fr)_420px]">
+        {/* desktop: controls in a column on the left, the map on the right; phones/tablets: controls, then map */}
+        <div className="mt-10 grid gap-6 lg:grid-cols-[420px_minmax(0,1fr)]">
         {/* ===== 1. controls: choose ===== */}
-        <section ref={panelRef} id="route-explorer" aria-labelledby="route-title" className="relative isolate z-20 p-5 md:p-6 lg:order-2">
+        <section ref={panelRef} id="route-explorer" aria-labelledby="route-title" className="relative isolate z-20 p-5 md:p-6">
           {/* chamfered surface lives on its own layer: clip-path on the card itself would clip the country dropdown */}
           <div aria-hidden="true" className="absolute inset-0 -z-10 bg-white" style={chamfer(24, "tr")} />
           <div className="flex flex-col gap-4 md:flex-row md:items-start lg:flex-col lg:items-stretch">
@@ -666,25 +666,22 @@ export default function Routes() {
                 </span>
               </label>
             ))}
-            {cardFields.map((f) => (
-              <fieldset key={f.key} className="w-full min-w-0">
-                <legend className={LABEL} style={{ color: "#686879" }}>{L(f.label)}</legend>
-                <div role="group" aria-label={L(f.label)} className="mt-2 grid gap-2 sm:grid-cols-3 lg:grid-cols-1">
-                  {f.options.map((o) => {
-                    const on = route.options[f.key] === o.id;
-                    return (
-                      <button key={o.id} type="button" aria-pressed={on} onClick={() => setOption(f.key, o.id)}
-                        className={`relative flex flex-col p-4 text-left ${PRESS} ${on ? "" : "[@media(hover:hover)]:hover:bg-[#ecebfc]"}`}
-                        style={on ? { background: "#fff", boxShadow: `inset 0 0 0 2px ${PURPLE}` } : { background: "#f3f2fd" }}>
-                        <strong className="block pr-5 text-[13px] font-semibold leading-snug" style={{ color: INK }}>{A(L(o.label))}</strong>
-                        {o.description && <small className="mt-1.5 block text-[11px] leading-5" style={{ color: "#686879" }}>{A(L(o.description))}</small>}
-                        <span className={`absolute right-3 top-3 transition-[opacity,transform] duration-200 ease-out ${on ? "scale-100 opacity-100" : "scale-90 opacity-0"}`} style={{ color: PURPLE }}>{I.check}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </fieldset>
-            ))}
+            {/* route choice as a compact select (was a stack of cards); the chosen route's stops show beneath */}
+            {cardFields.map((f) => {
+              const chosen = f.options.find((o) => o.id === route.options[f.key]);
+              return (
+                <label key={f.key} className="block w-full min-w-0">
+                  <span className={LABEL} style={{ color: "#686879" }}>{L(f.label)}</span>
+                  <span className="relative mt-2 block">
+                    <select data-route-field={f.key} aria-label={L(f.label)} value={route.options[f.key]} onChange={(e) => setOption(f.key, e.target.value)} className={`${FIELD} pr-10`} style={{ color: INK }}>
+                      {f.options.map((o) => <option key={o.id} value={o.id}>{L(o.label)}</option>)}
+                    </select>
+                    <Caret />
+                  </span>
+                  {chosen?.description && <span className="mt-2 block text-[12px] leading-5" style={{ color: "#6f6e88" }}>{A(L(chosen.description))}</span>}
+                </label>
+              );
+            })}
           </div>
           <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
             <div className="w-full">
@@ -722,11 +719,12 @@ export default function Routes() {
         </section>
 
       {/* ===== 2. map: see ===== */}
-      <div className="relative lg:order-1">
+      {/* desktop: the map runs out to the right edge of the screen (cancels the container padding and centring gutter) */}
+      <div className="relative lg:mr-[calc(-4rem-max(0px,(100vw-1600px)/2))]">
         <div ref={worldRef} data-mode={route.mode} className={`relative overflow-hidden ${expanded ? `fixed inset-3 z-[70] md:inset-8 ${SURFACE}` : "h-[62vh] min-h-[440px] lg:h-full lg:min-h-[620px]"}`} style={{ background: expanded ? "#f8f7ff" : "transparent" }}>
           <div ref={mapBoxRef} className="absolute inset-0" onPointerDown={(e) => { if (!(e.target as Element).closest("[data-stop]")) setTip(null); }} style={{
-            maskImage: "linear-gradient(to bottom, transparent 0, #000 14%, #000 86%, transparent 100%), linear-gradient(to right, transparent 0, #000 10%, #000 90%, transparent 100%)",
-            WebkitMaskImage: "linear-gradient(to bottom, transparent 0, #000 14%, #000 86%, transparent 100%), linear-gradient(to right, transparent 0, #000 10%, #000 90%, transparent 100%)",
+            maskImage: "linear-gradient(to bottom, transparent 0, #000 14%, #000 86%, transparent 100%), linear-gradient(to right, transparent 0, #000 10%, #000 97%, transparent 100%)",
+            WebkitMaskImage: "linear-gradient(to bottom, transparent 0, #000 14%, #000 86%, transparent 100%), linear-gradient(to right, transparent 0, #000 10%, #000 97%, transparent 100%)",
             maskComposite: "intersect",
             WebkitMaskComposite: "source-in",
           }}>
@@ -826,7 +824,7 @@ export default function Routes() {
             <h3 id="route-title" className="text-[26px] leading-tight md:text-[34px]" style={{ color: INK, fontFamily: '"Loos Wide", Inter, sans-serif', fontWeight: 500, letterSpacing: "-0.02em" }}>{A(L(route.title))}</h3>
           </div>
           {/* preview + consolidation stops, bottom */}
-          <div ref={dockRef} className="absolute inset-x-0 bottom-6 z-10 flex flex-wrap items-end justify-between gap-3 px-4 md:px-8">
+          <div ref={dockRef} className="absolute inset-x-0 bottom-6 z-10 flex flex-wrap items-end justify-between gap-3 px-4 md:px-8 lg:pr-[max(6rem,calc(4rem+(100vw-1600px)/2))]">{/* right end stays clear of the quick-contact button (min 6rem) and on the content line on wide screens */}
             <div className="w-full sm:w-[420px]">
               <div className="relative flex items-center gap-3 bg-white/90 px-4 py-3 backdrop-blur" style={chamfer(14, "br")}>
                 <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center" style={{ background: INK, color: LIME }}>{modeIcon(leg.mode, "h-5 w-5")}</span>
