@@ -6,6 +6,7 @@ import Services from "@/components/sections/Services";
 import Network from "@/components/sections/Network";
 import Footer from "@/components/sections/Footer";
 import Routes from "@/components/sections/Routes";
+import BlogPreview from "@/components/sections/BlogPosts";
 
 // The route explorer mirrors its selection in the query string (?route=…) so a view can be shared;
 // canonical tells search engines every such URL is this one page.
@@ -19,6 +20,7 @@ export default function Page() {
     <Network />
     <Services />
     <Routes />
+    <BlogPreview />
     <Footer />
   </main>;
 }

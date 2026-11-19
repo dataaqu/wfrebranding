@@ -4,14 +4,13 @@ import { useState, useRef, useEffect } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import Link from "next/link";
 import Header from "./Header";
-import { cn } from "@/lib/utils";
 import { useIntroDone } from "@/lib/intro";
 import { LogoHorizontal, WMark, chamfer, IconPlane, IconShip, IconTrain, IconTruck, IconDoc, IconContainer, IconShield, IconClock } from "@/components/brand/design-system";
 import { SERIES, MILESTONES, KPIS, AXIS_MAX, SIDEBAR } from "@/data/landing";
 
 const EASE = [0.16, 1, 0.3, 1] as const;
-// Glass buttons under the headline; text, icon and border turn brand lime on hover.
-const HERO_CTA = "wf-sub inline-flex min-h-11 items-center justify-center gap-3 border border-white/25 bg-white/10 px-5 text-xs font-bold text-white backdrop-blur transition-colors hover:border-volt-500 hover:bg-white/15 hover:text-volt-500";
+// Glass buttons under the headline; on hover they fill solid brand lime with navy text.
+const HERO_CTA = "wf-sub inline-flex min-h-11 items-center justify-center gap-3 border border-white/25 bg-white/10 px-5 text-xs font-bold text-white backdrop-blur transition-colors hover:border-volt-500 hover:bg-volt-500 hover:text-ink-950";
 // Placeholder until real TMS screens are ready; flip to true to show the mock dashboard again.
 const SHOW_TMS_MOCK = false;
 
@@ -302,7 +301,7 @@ export default function Hero() {
           transition={{ duration: 1, delay: reduce ? 0 : 0.35, ease: EASE }}
         >
           <div className="grid auto-cols-fr gap-3 sm:grid-flow-col">{/* equal-width buttons: side by side, stacked on phones */}
-            <button ref={tmsTrigger} type="button" data-anim="window-reopen" aria-haspopup="dialog" onClick={() => setTmsOpen(true)} className={cn(HERO_CTA, "hover:bg-volt-500 hover:text-ink-950")}>{/* this one fills solid lime on hover */}
+            <button ref={tmsTrigger} type="button" data-anim="window-reopen" aria-haspopup="dialog" onClick={() => setTmsOpen(true)} className={HERO_CTA}>
               Open TMS
             </button>
             <Link href="/track" data-anim="hero-track" className={HERO_CTA}>

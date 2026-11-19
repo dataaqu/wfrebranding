@@ -5,7 +5,8 @@ import { AnimatePresence, motion, useInView, useReducedMotion } from "motion/rea
 import { Reveal, WMark } from "@/components/brand/design-system";
 
 // Services and copy as on weforward.ge. `media` = clip in /assets/services (sources: videos/services, 1-6 in this order).
-const SERVICES = [
+// Shared with the /services grid.
+export const SERVICES = [
   { title: "Road freight", text: "Flexible trucking services for door-to-door delivery across regional networks.", media: "road" },
   { title: "Sea freight", text: "Cost-effective ocean shipping solutions for your cargo worldwide with reliable transit times.", media: "sea" },
   { title: "Air freight", text: "Fast and secure air cargo services for time-sensitive shipments across the globe.", media: "air" },
@@ -89,7 +90,7 @@ function useNear(ref: React.RefObject<HTMLElement | null>, margin = "800px") {
 /** Accordion (Flexport-style): the open service shows its text, the rest stay collapsed and muted.
  *  A line on the open item fills over ADVANCE_S seconds, then the next one opens; clicking any item opens it
  *  and restarts the timer. The brand card on the right crossfades to that service's clip. */
-export default function Services({ heading = true }: { heading?: boolean }) {
+export default function Services() {
   const [active, setActive] = useState(0);
   const reduce = !!useReducedMotion();
   const sectionRef = useRef<HTMLElement>(null);
@@ -99,11 +100,11 @@ export default function Services({ heading = true }: { heading?: boolean }) {
   const next = () => setActive((a) => (a + 1) % SERVICES.length);
 
   return (
-    <section ref={sectionRef} id="services" aria-labelledby={heading ? "services-title" : undefined} aria-label={heading ? undefined : "Services"} className={`bg-white ${heading ? "py-16 md:py-24" : "pb-16 md:pb-24"}`}>
+    <section ref={sectionRef} id="services" aria-labelledby="services-title" className="bg-white py-16 md:py-24">
       <div className="mx-auto grid max-w-[1600px] items-start gap-12 px-6 md:px-10 lg:grid-cols-2 lg:gap-14 lg:px-16">
         <div className="lg:order-1">
-          {heading && <Reveal id="services-head"><h2 id="services-title" className="wf-head text-4xl md:text-6xl" style={{ color: NAVY }}>Services</h2></Reveal>}
-          <ul className={`${heading ? "mt-10" : ""} border-b border-[#e7e6f0]`}>
+          <Reveal id="services-head"><h2 id="services-title" className="wf-head text-4xl md:text-6xl" style={{ color: NAVY }}>Services</h2></Reveal>
+          <ul className="mt-10 border-b border-[#e7e6f0]">
             {SERVICES.map((s, i) => {
               const on = i === active;
               return (
