@@ -176,8 +176,11 @@ export default function QuickContact() {
       {/* launcher */}
       <button ref={launcher} type="button" aria-label={open ? "Close quick contact" : "Contact us"} aria-expanded={open} aria-controls="quick-contact"
         onClick={() => setOpen((o) => !o)}
-        className="fixed bottom-4 right-4 z-[55] grid h-14 w-14 place-items-center bg-brand-500 text-white shadow-[0_12px_28px_-8px_rgba(100,79,242,0.6)] transition-[background-color,transform] duration-200 hover:-translate-y-0.5 hover:bg-brand-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-volt-500 md:bottom-6 md:right-6"
-        style={{ ...chamfer(14, "tr"), opacity: 0, visibility: ready ? "visible" : "hidden" }}>
+        className="group fixed bottom-4 right-4 z-[55] isolate grid h-14 w-14 place-items-center text-white transition-transform duration-200 hover:-translate-y-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-volt-500 md:bottom-6 md:right-6"
+        style={{ opacity: 0, visibility: ready ? "visible" : "hidden" }}>
+        {/* the cut-corner fill lives on its own layer: the entrance animation's revert() clears the button's
+            inline style, which used to take the clip-path (and so the brand corner) with it */}
+        <span aria-hidden="true" className="absolute inset-0 -z-10 bg-brand-500 transition-colors duration-200 group-hover:bg-brand-400" style={chamfer(14, "tr")} />
         <svg viewBox="0 0 24 24" className="qc-bubble col-start-1 row-start-1 h-6 w-6" fill="currentColor" fillRule="evenodd" aria-hidden="true"><path d={BUBBLE} /></svg>
         <svg viewBox="0 0 24 24" className="qc-cross col-start-1 row-start-1 h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="square" aria-hidden="true" style={{ opacity: 0 }}><path d="M6 6l12 12M18 6 6 18" /></svg>
       </button>

@@ -37,7 +37,7 @@ function Card({ s, index }: { s: (typeof SERVICES)[number]; index: number }) {
     >
       <article className="flex h-full flex-col bg-white" style={chamfer(27, "tr")}>
         {/* media: photo at rest, the service clip fades in over it on hover */}
-        <div className="relative aspect-[4/3] overflow-hidden bg-[#0b0b1f]">
+        <div className="relative aspect-square overflow-hidden bg-[#0b0b1f]">{/* square like the photos and clips, so nothing (e.g. the plane's wings) is cropped */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={`/assets/services/${s.media}.jpg`} alt="" width={720} height={720} loading="lazy" decoding="async"
             className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] [@media(hover:hover)]:group-hover:scale-[1.04]" />

@@ -11,6 +11,7 @@ const MEMBERSHIPS: Logo[] = [
   { src: "m2", name: "JCtrans", h: "h-9 md:h-10" },
   { src: "m3", name: "WCA World", h: "h-12 md:h-14" },
   { src: "m4", name: "All World Shipping", h: "h-9 md:h-10" },
+  { src: "ungc", name: "United Nations Global Compact", h: "h-14 md:h-16" },
 ];
 const CARRIERS: Logo[] = [
   { src: "maersk", name: "Maersk", h: "h-8" },
@@ -57,7 +58,7 @@ export default function Network() {
 
         <div className="mt-10 md:mt-12">
           <GroupTitle>Network memberships</GroupTitle>
-          <ul className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
+          <ul className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4 lg:grid-cols-5">
             {MEMBERSHIPS.map((m) => <li key={m.src}><Tile logo={m} className="h-32 md:h-40" /></li>)}
           </ul>
         </div>

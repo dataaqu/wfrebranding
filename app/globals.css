@@ -144,3 +144,7 @@
 @keyframes qc-dot { 0%, 60%, 100% { transform: translateY(0); opacity: 0.45; } 30% { transform: translateY(-4px); opacity: 1; } }
 .qc-dot { animation: qc-dot 0.9s ease-in-out infinite; }
 @media (prefers-reduced-motion: reduce) { .qc-dot { animation: none; } }
+
+/* Section jumps (home dock links): land below the fixed header; glide there unless motion is reduced */
+html { scroll-padding-top: 80px; }
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
